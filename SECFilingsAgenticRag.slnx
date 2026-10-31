@@ -11,6 +11,7 @@
   <Folder Name="/src/">
     <Project Path="src/SECFilingsAgenticRag.AppHost/SECFilingsAgenticRag.AppHost.csproj" />
     <Project Path="src/SECFilingsAgenticRag.Common/SECFilingsAgenticRag.Common.csproj" />
+    <Project Path="src/SECFilingsAgenticRag.IngestionInit/SECFilingsAgenticRag.IngestionInit.csproj" />
     <Project Path="src/SECFilingsAgenticRag.IngestionPipeline/SECFilingsAgenticRag.IngestionPipeline.csproj" />
     <Project Path="src/SECFilingsAgenticRag.ServiceDefaults/SECFilingsAgenticRag.ServiceDefaults.csproj" />
   </Folder>

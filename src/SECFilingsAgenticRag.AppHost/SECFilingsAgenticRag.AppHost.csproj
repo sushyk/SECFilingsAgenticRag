@@ -11,4 +11,8 @@
     <PackageReference Include="Aspire.Hosting.Azure.Storage" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SECFilingsAgenticRag.IngestionInit\SECFilingsAgenticRag.IngestionInit.csproj" />
+  </ItemGroup>
+
 </Project>
