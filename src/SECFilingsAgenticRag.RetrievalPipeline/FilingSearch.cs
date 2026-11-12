@@ -7,7 +7,7 @@ namespace SECFilingsAgenticRag.RetrievalPipeline;
 // The read-side mirror of MEDI's IngestionPipeline, after the proposed Microsoft.Extensions.DataRetrieval RetrievalPipeline
 // (dotnet/extensions#7507): query → search → results, traced as one span. The proposal's types are unpublished and cannot
 // carry a VectorSearchOptions filter, so the stages run on the built-in IVectorSearchable, and the query and result processors
-// it describes (multi-query, rerank) arrive in Phase 6 as decorators behind it. Every consumer calls this one method.
+// it describes (multi-query, rerank) are decorators behind it. Every consumer calls this one method.
 public static class FilingSearch
 {
     public const string ActivitySourceName = "SECFilingsAgenticRag.RetrievalPipeline";
@@ -28,7 +28,7 @@ public static class FilingSearch
 
         var topK = options.ClampTop(top);
         using var activity = ActivitySource.StartActivity("RetrievalPipeline.Process");
-        activity?.SetTag("rag.strategy", options.Strategy).SetTag("rag.topK", topK);
+        activity?.SetTag("rag.strategy", options.Describe()).SetTag("rag.topK", topK);
 
         // A string search value is embedded by the store's keyed query generator, which adds the query task prefix.
         var searchOptions = new VectorSearchOptions<FilingChunkRecord>

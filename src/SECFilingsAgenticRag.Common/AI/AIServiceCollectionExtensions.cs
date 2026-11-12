@@ -7,10 +7,6 @@ namespace SECFilingsAgenticRag.Common.AI;
 
 public static class AIServiceCollectionExtensions
 {
-    // Local CPU inference is slow, and ServiceDefaults attach a 10 s / 30 s resilience handler to IHttpClientFactory
-    // clients, which would kill these calls. That is why Ollama gets a dedicated HttpClient.
-    private static readonly TimeSpan OllamaTimeout = TimeSpan.FromMinutes(10);
-
     // The chat client has no UseFunctionInvocation: agents add their own with an iteration cap.
     public static IServiceCollection AddSecFilingsAI(this IServiceCollection services, IConfiguration configuration) =>
         services.AddSecFilingsAI(configuration, embeddingGenerator: null);
@@ -20,16 +16,12 @@ public static class AIServiceCollectionExtensions
         this IServiceCollection services, IConfiguration configuration,
         Func<IServiceProvider, IEmbeddingGenerator<string, Embedding<float>>>? embeddingGenerator)
     {
-        var endpoint = new Uri(configuration.GetConnectionString("ollama")
-            ?? throw new InvalidOperationException("ConnectionStrings:ollama is not configured, e.g. \"http://localhost:11434\"."));
         var chatModel = configuration["AI:Chat:Model"]
             ?? throw new InvalidOperationException("AI:Chat:Model is not configured.");
 
-        services.AddChatClient(_ => new OllamaApiClient(NewHttpClient(endpoint), chatModel))
-            .UseLogging()
-            .UseOpenTelemetry();
+        services.AddSingleton(sp => ChatClientFactory.Create(sp, configuration, chatModel));
 
-        embeddingGenerator ??= _ => new OllamaApiClient(NewHttpClient(endpoint), EmbeddingModelConstants.Name);
+        embeddingGenerator ??= _ => new OllamaApiClient(ChatClientFactory.NewOllamaHttpClient(configuration), EmbeddingModelConstants.Name);
         AddEmbeddingGenerator(services, EmbeddingModelConstants.DocumentEmbeddingKey, embeddingGenerator, EmbeddingModelConstants.DocumentPrefix);
         AddEmbeddingGenerator(services, EmbeddingModelConstants.QueryEmbeddingKey, embeddingGenerator, EmbeddingModelConstants.QueryPrefix);
 
@@ -50,6 +42,4 @@ public static class AIServiceCollectionExtensions
             })
             .UseLogging()
             .UseOpenTelemetry();
-
-    private static HttpClient NewHttpClient(Uri endpoint) => new() { BaseAddress = endpoint, Timeout = OllamaTimeout };
 }

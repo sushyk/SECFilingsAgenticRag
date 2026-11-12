@@ -1,0 +1,268 @@
+{
+  "version": 1,
+  "questions": [
+    {
+      "id": "aapl-supply-chain-01",
+      "question": "What supply chain and manufacturing risks does Apple describe?",
+      "filter": { "tickers": ["AAPL"] },
+      "expected": [
+        { "documentId": "AAPL/10-K/0000320193-25-000079", "sectionPrefix": "Item 1A", "mustContainAny": ["outsourcing partners"] }
+      ],
+      "referenceAnswer": "A significant majority of Apple's manufacturing is performed by outsourcing partners located primarily in China mainland, India, Japan, South Korea, Taiwan and Vietnam, so tariffs, trade restrictions and disruptions affecting those partners can materially harm its business.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "AAPL" } } ]
+    },
+    {
+      "id": "aapl-iphone-sales-01",
+      "question": "Why did Apple's iPhone net sales change in fiscal 2025?",
+      "filter": { "tickers": ["AAPL"] },
+      "expected": [
+        { "documentId": "AAPL/10-K/0000320193-25-000079", "sectionPrefix": "Item 7", "mustContainAny": ["Pro models"] }
+      ],
+      "referenceAnswer": "iPhone net sales increased in fiscal 2025 compared to 2024 due to higher net sales of Pro models.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "AAPL" } } ]
+    },
+    {
+      "id": "aapl-employees-01",
+      "question": "How many employees did Apple have at the end of fiscal 2025?",
+      "filter": { "tickers": ["AAPL"] },
+      "expected": [
+        { "documentId": "AAPL/10-K/0000320193-25-000079", "sectionPrefix": "Item 1.", "mustContainAny": ["166,000"] }
+      ],
+      "referenceAnswer": "As of September 27, 2025, Apple had approximately 166,000 full-time equivalent employees.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "AAPL" } } ]
+    },
+    {
+      "id": "aapl-dma-01",
+      "question": "What does Apple disclose about the EU Digital Markets Act investigations?",
+      "expected": [
+        { "documentId": "AAPL/10-K/0000320193-25-000079", "sectionPrefix": "Item 3", "mustContainAny": ["Digital Markets Act"] }
+      ],
+      "referenceAnswer": "On March 25, 2024 the European Commission opened a formal noncompliance investigation against Apple under Article 5(4) of the DMA, about how developers may communicate and promote offers to end users for apps distributed through the App Store and how they may conclude contracts.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "AAPL" } } ]
+    },
+    {
+      "id": "msft-employees-01",
+      "question": "How many people did Microsoft employ as of June 30, 2026?",
+      "filter": { "tickers": ["MSFT"] },
+      "expected": [
+        { "documentId": "MSFT/10-K/0001193125-26-323660", "sectionPrefix": "Item 1.", "mustContainAny": ["223,000"] }
+      ],
+      "referenceAnswer": "Microsoft employed approximately 223,000 people full time: 121,000 in the U.S. and 102,000 internationally.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "MSFT" } } ]
+    },
+    {
+      "id": "msft-azure-growth-01",
+      "question": "How fast did Microsoft's Azure revenue grow in fiscal 2026?",
+      "filter": { "tickers": ["MSFT"] },
+      "expected": [
+        { "documentId": "MSFT/10-K/0001193125-26-323660", "sectionPrefix": "Item 7", "mustContainAny": ["Azure and other cloud services revenue increased"] }
+      ],
+      "referenceAnswer": "Azure and other cloud services revenue increased 41% in fiscal 2026.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "MSFT" } } ]
+    },
+    {
+      "id": "msft-ai-competition-01",
+      "question": "What competitive risks does Microsoft see in artificial intelligence?",
+      "filter": { "tickers": ["MSFT"] },
+      "expected": [
+        { "documentId": "MSFT/10-K/0001193125-26-323660", "sectionPrefix": "Item 1A", "mustContainAny": ["AI technology and services are a highly competitive"] }
+      ],
+      "referenceAnswer": "Microsoft says AI technology and services are a highly competitive and rapidly evolving market with new entrants; its AI offerings compete with AI products from hyperscalers, open-source offerings and others.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "MSFT" } } ]
+    },
+    {
+      "id": "msft-cybersecurity-01",
+      "question": "How does Microsoft's management oversee cybersecurity risk?",
+      "filter": { "tickers": ["MSFT"] },
+      "expected": [
+        { "documentId": "MSFT/10-K/0001193125-26-323660", "sectionPrefix": "Item 1C", "mustContainAny": ["Chief Information Security Officer", "CISO"] }
+      ],
+      "referenceAnswer": "Cybersecurity risk is overseen by management including the Chief Information Security Officer, the EVP of Microsoft Security, the EVP of Cloud + AI and the head of Customer Security and Trust, who present threats, incidents, top risks and remediation to the board.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "MSFT" } } ]
+    },
+    {
+      "id": "nvda-export-controls-01",
+      "question": "How do export controls affect NVIDIA's business?",
+      "filter": { "tickers": ["NVDA"] },
+      "expected": [
+        { "documentId": "NVDA/10-K/0001045810-26-000021", "sectionPrefix": "Item 1A", "mustContainAny": ["export control"] }
+      ],
+      "referenceAnswer": "U.S. export controls restrict sales of NVIDIA's data center products, such as the H20, to China and other countries; NVIDIA incurred a $4.5 billion charge for H20 excess inventory and purchase obligations and warns that export controls may harm its competitive position and revenue.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "NVDA" } } ]
+    },
+    {
+      "id": "nvda-h20-charge-01",
+      "question": "Which company recorded a $4.5 billion charge related to H20, and why?",
+      "expected": [
+        { "documentId": "NVDA/10-K/0001045810-26-000021", "sectionPrefix": "Item 1A", "mustContainAny": ["H20"] }
+      ],
+      "referenceAnswer": "NVIDIA recorded a $4.5 billion charge in the first quarter of fiscal 2026 for H20 excess inventory and purchase obligations after new U.S. license requirements restricted H20 exports to China.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "NVDA" } } ]
+    },
+    {
+      "id": "nvda-customer-concentration-01",
+      "question": "How concentrated is NVIDIA's revenue among its direct customers?",
+      "filter": { "tickers": ["NVDA"] },
+      "expected": [
+        { "documentId": "NVDA/10-K/0001045810-26-000021", "sectionPrefix": "Item 1A", "mustContainAny": ["direct customer"] }
+      ],
+      "referenceAnswer": "In fiscal 2026 one direct customer represented 22% of NVIDIA's total revenue and another 14%, both primarily attributable to the Compute & Networking segment.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "NVDA" } } ]
+    },
+    {
+      "id": "nvda-employees-01",
+      "question": "How many employees does NVIDIA have, and in which roles?",
+      "filter": { "tickers": ["NVDA"] },
+      "expected": [
+        { "documentId": "NVDA/10-K/0001045810-26-000021", "sectionPrefix": "Item 1.", "mustContainAny": ["42,000 employees"] }
+      ],
+      "referenceAnswer": "At the end of fiscal 2026 NVIDIA had approximately 42,000 employees in 38 countries: 31,000 in research and development and 11,000 in sales, marketing, operations and administration.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "NVDA" } } ]
+    },
+    {
+      "id": "amzn-segments-01",
+      "question": "What are Amazon's reportable segments?",
+      "filter": { "tickers": ["AMZN"] },
+      "expected": [
+        { "documentId": "AMZN/10-K/0001018724-26-000004", "sectionPrefix": "Item 1.", "mustContainAny": ["three segments"] }
+      ],
+      "referenceAnswer": "Amazon has three segments: North America, International and Amazon Web Services (AWS).",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "AMZN" } } ]
+    },
+    {
+      "id": "amzn-aws-growth-01",
+      "question": "How did AWS sales grow in 2025, and what drove the growth?",
+      "filter": { "tickers": ["AMZN"] },
+      "expected": [
+        { "documentId": "AMZN/10-K/0001018724-26-000004", "sectionPrefix": "Item 7", "mustContainAny": ["AWS sales increased"] }
+      ],
+      "referenceAnswer": "AWS sales increased 20% in 2025, primarily reflecting increased customer usage, partially offset by pricing changes driven by long-term customer contracts.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "AMZN" } } ]
+    },
+    {
+      "id": "amzn-capex-01",
+      "question": "How much did Amazon spend on cash capital expenditures in 2025, and on what?",
+      "filter": { "tickers": ["AMZN"] },
+      "expected": [
+        { "documentId": "AMZN/10-K/0001018724-26-000004", "sectionPrefix": "Item 7", "mustContainAny": ["Cash capital expenditures were"] }
+      ],
+      "referenceAnswer": "Cash capital expenditures were $128.3 billion in 2025 (up from $77.7 billion in 2024), mainly technology infrastructure supporting AWS growth and additional fulfillment network capacity.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "AMZN" } } ]
+    },
+    {
+      "id": "amzn-employees-01",
+      "question": "How many employees did Amazon have at the end of 2025?",
+      "filter": { "tickers": ["AMZN"] },
+      "expected": [
+        { "documentId": "AMZN/10-K/0001018724-26-000004", "sectionPrefix": "Item 1.", "mustContainAny": ["1,576,000"] }
+      ],
+      "referenceAnswer": "As of December 31, 2025, Amazon employed approximately 1,576,000 full-time and part-time employees.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "AMZN" } } ]
+    },
+    {
+      "id": "tsla-factories-01",
+      "question": "Where are Tesla's primary manufacturing facilities?",
+      "filter": { "tickers": ["TSLA"] },
+      "expected": [
+        { "documentId": "TSLA/10-K/0001628280-26-003952", "sectionPrefix": "Item 2", "mustContainAny": ["Gigafactory"] }
+      ],
+      "referenceAnswer": "Tesla's primary manufacturing facilities include Gigafactory Texas (Austin), the Fremont Factory (California), Gigafactory Nevada (Sparks), Gigafactory Berlin-Brandenburg (Germany), Gigafactory Shanghai, Megafactory Shanghai and Gigafactory New York (Buffalo).",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "TSLA" } } ]
+    },
+    {
+      "id": "tsla-regulatory-credits-01",
+      "question": "How much revenue did Tesla earn from automotive regulatory credits in 2025?",
+      "filter": { "tickers": ["TSLA"] },
+      "expected": [
+        { "documentId": "TSLA/10-K/0001628280-26-003952", "sectionPrefix": "Item 7", "mustContainAny": ["regulatory credits"] }
+      ],
+      "referenceAnswer": "Automotive regulatory credits revenue was $1,993 million in 2025, down $770 million (28%) from $2,763 million in 2024.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "TSLA" } } ]
+    },
+    {
+      "id": "tsla-competition-01",
+      "question": "What does Tesla say about competition in the automotive market?",
+      "filter": { "tickers": ["TSLA"] },
+      "expected": [
+        { "documentId": "TSLA/10-K/0001628280-26-003952", "sectionPrefix": "Item 1A", "mustContainAny": ["highly competitive"] }
+      ],
+      "referenceAnswer": "Tesla says the worldwide automotive market is highly competitive and expected to become more so, with a growing number of established and new manufacturers entering the electric vehicle market.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "TSLA" } } ]
+    },
+    {
+      "id": "tsla-headcount-01",
+      "question": "What was Tesla's worldwide employee headcount at the end of 2025?",
+      "filter": { "tickers": ["TSLA"] },
+      "expected": [
+        { "documentId": "TSLA/10-K/0001628280-26-003952", "sectionPrefix": "Item 1.", "mustContainAny": ["134,785"] }
+      ],
+      "referenceAnswer": "As of December 31, 2025, Tesla's employee headcount worldwide was 134,785.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "TSLA" } } ]
+    },
+    {
+      "id": "tsla-energy-01",
+      "question": "How did Tesla's energy generation and storage revenue change in 2025?",
+      "expected": [
+        { "documentId": "TSLA/10-K/0001628280-26-003952", "sectionPrefix": "Item 7", "mustContainAny": ["Energy generation and storage revenue increased"] }
+      ],
+      "referenceAnswer": "Tesla's energy generation and storage revenue increased $2.69 billion, or 27%, in 2025 compared to 2024.",
+      "expectedToolCalls": [ { "name": "search_filings", "arguments": { "ticker": "TSLA" } } ]
+    },
+    {
+      "id": "cross-employees-aapl-msft-01",
+      "question": "Compare the employee headcounts of Apple and Microsoft.",
+      "filter": { "tickers": ["AAPL", "MSFT"] },
+      "expected": [
+        { "documentId": "AAPL/10-K/0000320193-25-000079", "sectionPrefix": "Item 1.", "mustContainAny": ["166,000"] },
+        { "documentId": "MSFT/10-K/0001193125-26-323660", "sectionPrefix": "Item 1.", "mustContainAny": ["223,000"] }
+      ],
+      "referenceAnswer": "Apple had approximately 166,000 full-time equivalent employees (September 27, 2025); Microsoft employed approximately 223,000 people full time (June 30, 2026), so Microsoft's workforce is larger.",
+      "expectedToolCalls": [
+        { "name": "search_filings", "arguments": { "ticker": "AAPL" } },
+        { "name": "search_filings", "arguments": { "ticker": "MSFT" } }
+      ]
+    },
+    {
+      "id": "cross-cloud-growth-amzn-msft-01",
+      "question": "Compare the growth of Amazon's AWS and Microsoft's Azure in their latest fiscal years.",
+      "filter": { "tickers": ["AMZN", "MSFT"] },
+      "expected": [
+        { "documentId": "AMZN/10-K/0001018724-26-000004", "sectionPrefix": "Item 7", "mustContainAny": ["AWS sales increased"] },
+        { "documentId": "MSFT/10-K/0001193125-26-323660", "sectionPrefix": "Item 7", "mustContainAny": ["Azure and other cloud services revenue increased"] }
+      ],
+      "referenceAnswer": "AWS sales increased 20% in 2025, while Microsoft's Azure and other cloud services revenue increased 41% in fiscal 2026, so Azure grew faster.",
+      "expectedToolCalls": [
+        { "name": "search_filings", "arguments": { "ticker": "AMZN" } },
+        { "name": "search_filings", "arguments": { "ticker": "MSFT" } }
+      ]
+    },
+    {
+      "id": "cross-competition-aapl-tsla-01",
+      "question": "How do Apple and Tesla describe the competitiveness of their markets?",
+      "filter": { "tickers": ["AAPL", "TSLA"] },
+      "expected": [
+        { "documentId": "AAPL/10-K/0000320193-25-000079", "sectionPrefix": "Item 1.", "mustContainAny": ["highly competitive"] },
+        { "documentId": "TSLA/10-K/0001628280-26-003952", "sectionPrefix": "Item 1A", "mustContainAny": ["highly competitive"] }
+      ],
+      "referenceAnswer": "Apple describes its markets as highly competitive, with aggressive price competition, downward pressure on gross margins and frequent product introductions; Tesla says the worldwide automotive market is highly competitive and becoming more so as established and new manufacturers enter electric vehicles.",
+      "expectedToolCalls": [
+        { "name": "search_filings", "arguments": { "ticker": "AAPL" } },
+        { "name": "search_filings", "arguments": { "ticker": "TSLA" } }
+      ]
+    },
+    {
+      "id": "cross-cybersecurity-aapl-msft-01",
+      "question": "How do Apple and Microsoft govern cybersecurity risk?",
+      "filter": { "tickers": ["AAPL", "MSFT"] },
+      "expected": [
+        { "documentId": "AAPL/10-K/0000320193-25-000079", "sectionPrefix": "Item 1C", "mustContainAny": ["Information Security"] },
+        { "documentId": "MSFT/10-K/0001193125-26-323660", "sectionPrefix": "Item 1C", "mustContainAny": ["Chief Information Security Officer", "CISO"] }
+      ],
+      "referenceAnswer": "At Apple, management led by the Head of Corporate Information Security is responsible for identifying, assessing and managing cybersecurity risks; at Microsoft, the CISO, the EVPs of Microsoft Security and Cloud + AI and the head of Customer Security and Trust report on threats, incidents and risks to the board.",
+      "expectedToolCalls": [
+        { "name": "search_filings", "arguments": { "ticker": "AAPL" } },
+        { "name": "search_filings", "arguments": { "ticker": "MSFT" } }
+      ]
+    }
+  ]
+}

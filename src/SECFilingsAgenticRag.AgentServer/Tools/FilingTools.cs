@@ -31,7 +31,7 @@ public sealed partial class FilingTools(
 
     // The one raw SQL of the agent layer: MEVD's GetAsync(filter, top) returns records, not GROUP BY aggregates.
     private const string CatalogSql = $"""
-        SELECT "{Columns.Ticker}", "{Columns.CompanyName}", "{Columns.FormType}", "{Columns.FiscalYear}", "documentid", COUNT(*)::int
+        SELECT "{Columns.Ticker}", "{Columns.CompanyName}", "{Columns.FormType}", "{Columns.FiscalYear}", "{FilingChunkRecord.DocumentIdStorageName}", COUNT(*)::int
         FROM "{FilingChunkRecord.CollectionName}"
         GROUP BY 1, 2, 3, 4, 5
         ORDER BY 1, 4 DESC, 3

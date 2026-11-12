@@ -8,6 +8,9 @@
     <File Path="README.md" />
 
   </Folder>
+  <Folder Name="/evals/">
+    <Project Path="evals/SECFilingsAgenticRag.Evals/SECFilingsAgenticRag.Evals.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/SECFilingsAgenticRag.AgentClient.Cli/SECFilingsAgenticRag.AgentClient.Cli.csproj" />
     <Project Path="src/SECFilingsAgenticRag.AgentServer/SECFilingsAgenticRag.AgentServer.csproj" />

@@ -31,7 +31,7 @@ public static class FilingFilters
         [.. values?.Select(value => value.Trim().ToUpperInvariant()).Distinct() ?? []];
 
     // Rebinding the parameter instead of Expression.Invoke, which filter translators reject.
-    private static Expression<Func<FilingChunkRecord, bool>> And(
+    internal static Expression<Func<FilingChunkRecord, bool>> And(
         Expression<Func<FilingChunkRecord, bool>> left, Expression<Func<FilingChunkRecord, bool>> right) =>
         Expression.Lambda<Func<FilingChunkRecord, bool>>(
             Expression.AndAlso(left.Body, new ParameterReplacer(right.Parameters[0], left.Parameters[0]).Visit(right.Body)),

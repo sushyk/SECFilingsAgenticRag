@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SECFilingsAgenticRag.AgentServer\SECFilingsAgenticRag.AgentServer.csproj" />
+    <ProjectReference Include="..\..\evals\SECFilingsAgenticRag.Evals\SECFilingsAgenticRag.Evals.csproj" />
     <ProjectReference Include="..\SECFilingsAgenticRag.IngestionInit\SECFilingsAgenticRag.IngestionInit.csproj" />
     <ProjectReference Include="..\SECFilingsAgenticRag.IngestionPipeline.Functions\SECFilingsAgenticRag.IngestionPipeline.Functions.csproj" />
   </ItemGroup>

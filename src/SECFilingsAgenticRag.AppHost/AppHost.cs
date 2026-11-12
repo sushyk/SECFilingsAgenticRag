@@ -55,6 +55,15 @@ builder.AddProject<Projects.SECFilingsAgenticRag_AgentServer>("api")
     .WithEnvironment("AI__Chat__Model", chatModel)
     .WithExternalHttpEndpoints();
 
+// Explicit start: an eval run takes minutes to hours on CPU, so it runs only when asked (aspire resource evals-retrieval start).
+foreach (var (name, command) in new[] { ("evals-retrieval", "retrieval"), ("evals-answers", "answers") })
+    builder.AddProject<Projects.SECFilingsAgenticRag_Evals>(name)
+        .WithArgs(command)
+        .WithReference(db).WaitFor(db)
+        .WithReference(ollama)
+        .WithEnvironment("AI__Chat__Model", chatModel)
+        .WithExplicitStart();
+
 builder.Build().Run();
 
 static HttpCommandOptions ReindexOptions(bool force, string description, string? confirmationMessage = null) => new()

@@ -8,19 +8,21 @@ namespace SECFilingsAgenticRag.Common.VectorStore;
 public sealed class FilingChunkRecord
 {
     public const string CollectionName = "sec_filing_chunks";
+    public const string KeyStorageName = "key", TextStorageName = "content", DocumentIdStorageName = "documentid";
 
     // Random per write, so it is not stable across re-indexing.
-    [VectorStoreKey(StorageName = "key")]
+    [VectorStoreKey(StorageName = KeyStorageName)]
     public Guid Key { get; set; }
 
-    // Cleaned text without task prefixes: it is what gets embedded, returned to the LLM and cited.
-    [VectorStoreData(StorageName = "content")]
+    // Cleaned text without task prefixes: it is what gets embedded, returned to the LLM and cited. Full-text indexed so
+    // EnsureCollectionExistsAsync creates the GIN index over to_tsvector('english', content) that hybrid search uses.
+    [VectorStoreData(StorageName = TextStorageName, IsFullTextIndexed = true)]
     public string Text { get; set; } = "";
 
     [VectorStoreData(StorageName = "context")]
     public string? Context { get; set; }
 
-    [VectorStoreData(StorageName = "documentid", IsIndexed = true)]
+    [VectorStoreData(StorageName = DocumentIdStorageName, IsIndexed = true)]
     public string DocumentId { get; set; } = "";
 
     [VectorStoreData(StorageName = FilingChunkMetadataKeys.Ticker, IsIndexed = true)]

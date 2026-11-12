@@ -45,9 +45,9 @@ public static class SearchEndpoints
         loggerFactory.CreateLogger(typeof(SearchEndpoints)).LogInformation(
             "Search {Query} tickers={Tickers} formTypes={FormTypes} fiscalYears={FiscalYears} strategy={Strategy} hits={Hits} elapsedMs={ElapsedMs}",
             request.Query[..Math.Min(LoggedQueryLength, request.Query.Length)], request.Tickers, request.FormTypes, request.FiscalYears,
-            options.Strategy, hits.Count, elapsed.TotalMilliseconds);
+            options.Describe(), hits.Count, elapsed.TotalMilliseconds);
 
-        return TypedResults.Ok(new SearchResponse(request.Query, options.Strategy, [.. hits.Select(ToHit)], elapsed));
+        return TypedResults.Ok(new SearchResponse(request.Query, options.Describe(), [.. hits.Select(ToHit)], elapsed));
     }
 
     private static SearchHit ToHit(VectorSearchResult<FilingChunkRecord> hit)
