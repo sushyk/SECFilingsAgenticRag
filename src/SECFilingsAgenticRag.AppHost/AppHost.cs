@@ -47,6 +47,14 @@ builder.AddAzureFunctionsProject<Projects.SECFilingsAgenticRag_IngestionPipeline
     .WithHttpCommand("/api/index", "Force re-index all filings", commandName: "reindex-force",
         commandOptions: ReindexOptions(force: true, "Re-embed every filing", "Re-embed every filing? This takes several minutes on CPU."));
 
+// Waits only for the database: search returns no hits until indexing has run. Host port 5180 comes from launchSettings.json,
+// so clients can rely on it.
+builder.AddProject<Projects.SECFilingsAgenticRag_AgentServer>("api")
+    .WithReference(db).WaitFor(db)
+    .WithReference(ollama)
+    .WithEnvironment("AI__Chat__Model", chatModel)
+    .WithExternalHttpEndpoints();
+
 builder.Build().Run();
 
 static HttpCommandOptions ReindexOptions(bool force, string description, string? confirmationMessage = null) => new()
