@@ -120,9 +120,13 @@ public sealed partial class FilingTools(
 
     public IList<AITool> AsTools() =>
     [
-        AIFunctionFactory.Create(SearchFilingsAsync, SearchToolName),
-        AIFunctionFactory.Create(ListAvailableFilingsAsync, ListToolName),
+        AIFunctionFactory.Create(SearchFilingsAsync, new AIFunctionFactoryOptions { Name = SearchToolName, MarshalResult = AsIs }),
+        AIFunctionFactory.Create(ListAvailableFilingsAsync, new AIFunctionFactoryOptions { Name = ListToolName, MarshalResult = AsIs }),
     ];
+
+    // The results are already model-ready text. The default marshaller JSON-serializes them into one escaped string literal, which
+    // hid the excerpt tags and line breaks from the agent's model and from MCP clients.
+    private static ValueTask<object?> AsIs(object? result, Type? returnType, CancellationToken cancellationToken) => new(result);
 
     // Deterministic, so citations stay consistent across tool calls without per-turn state. Chunks of one Item share a tag on
     // purpose (same source); sections that are not an Item fall back to the chunk index, so a tag never names two sources.

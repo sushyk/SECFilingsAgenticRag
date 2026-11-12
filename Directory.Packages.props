@@ -53,6 +53,7 @@
     <!-- AgentServer -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Agents.AI.Hosting.AGUI.AspNetCore" Version="1.28.0-preview.261106.1" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
 
     <!-- AgentClient.Cli -->
     <PackageVersion Include="AGUI.Client" Version="1.0.1" />
