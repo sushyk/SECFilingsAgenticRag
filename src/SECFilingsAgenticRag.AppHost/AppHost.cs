@@ -1,3 +1,5 @@
+using System.Net.Http.Json;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Persistent so the container survives AppHost restarts. CREATE EXTENSION runs from AddSecFilingsVectorStore
@@ -32,6 +34,30 @@ builder.AddProject<Projects.SECFilingsAgenticRag_IngestionInit>("ingestion-init"
     .WithEnvironment("IngestionInit__DataPath", dataPath)
     .WithEnvironment("IngestionInit__Edgar__UserAgent", secUserAgent);
 
-_ = (db, ollama, chatModel);
+// Nothing indexes automatically: the user requests it with scripts/Invoke-Indexing.ps1 or these commands. HttpClientName is left
+// unset, so the command's HttpClient has an infinite timeout and a long forced run still returns its report.
+builder.AddAzureFunctionsProject<Projects.SECFilingsAgenticRag_IngestionPipeline_Functions>("indexing")
+    .WithHostStorage(storage)
+    .WithReference(db).WaitFor(db)
+    .WithReference(filings).WaitFor(filings)
+    .WithReference(ollama)
+    .WithEnvironment("AI__Chat__Model", chatModel)
+    .WithHttpCommand("/api/index", "Re-index filings", commandName: "reindex",
+        commandOptions: ReindexOptions(force: false, "Index new or changed filings; unchanged ones are skipped"))
+    .WithHttpCommand("/api/index", "Force re-index all filings", commandName: "reindex-force",
+        commandOptions: ReindexOptions(force: true, "Re-embed every filing", "Re-embed every filing? This takes several minutes on CPU."));
 
 builder.Build().Run();
+
+static HttpCommandOptions ReindexOptions(bool force, string description, string? confirmationMessage = null) => new()
+{
+    Method = HttpMethod.Post,
+    Description = description,
+    ConfirmationMessage = confirmationMessage,
+    ResultMode = HttpCommandResultMode.Json,
+    PrepareRequest = context =>
+    {
+        context.Request.Content = JsonContent.Create(new { force });
+        return Task.CompletedTask;
+    },
+};

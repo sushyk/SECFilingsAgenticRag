@@ -8,11 +8,12 @@ namespace SECFilingsAgenticRag.Common.VectorStore;
 
 public static class VectorStoreServiceCollectionExtensions
 {
+    // Registered as the abstract VectorStore so MEDI's VectorStoreWriter can use it without referencing the connector.
     // Requires an NpgsqlDataSource built with UseVector(). embeddingKey picks the generator the store embeds with:
     // Document on the indexing host, Query on the Api, so one table is written and searched with the right prefixes.
     public static IServiceCollection AddSecFilingsVectorStore(this IServiceCollection services, string embeddingKey)
     {
-        services.AddSingleton(sp =>
+        services.AddSingleton<Microsoft.Extensions.VectorData.VectorStore>(sp =>
         {
             var dataSource = sp.GetRequiredService<NpgsqlDataSource>();
             EnableVectorExtension(dataSource);
@@ -26,7 +27,7 @@ public static class VectorStoreServiceCollectionExtensions
         });
 
         services.AddSingleton<VectorStoreCollection<Guid, FilingChunkRecord>>(sp =>
-            sp.GetRequiredService<PostgresVectorStore>().GetCollection<Guid, FilingChunkRecord>(FilingChunkRecord.CollectionName));
+            sp.GetRequiredService<Microsoft.Extensions.VectorData.VectorStore>().GetCollection<Guid, FilingChunkRecord>(FilingChunkRecord.CollectionName));
 
         return services;
     }

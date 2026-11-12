@@ -13,6 +13,7 @@
     <Project Path="src/SECFilingsAgenticRag.Common/SECFilingsAgenticRag.Common.csproj" />
     <Project Path="src/SECFilingsAgenticRag.IngestionInit/SECFilingsAgenticRag.IngestionInit.csproj" />
     <Project Path="src/SECFilingsAgenticRag.IngestionPipeline/SECFilingsAgenticRag.IngestionPipeline.csproj" />
+    <Project Path="src/SECFilingsAgenticRag.IngestionPipeline.Functions/SECFilingsAgenticRag.IngestionPipeline.Functions.csproj" />
     <Project Path="src/SECFilingsAgenticRag.ServiceDefaults/SECFilingsAgenticRag.ServiceDefaults.csproj" />
   </Folder>
   <Folder Name="/tests/" />

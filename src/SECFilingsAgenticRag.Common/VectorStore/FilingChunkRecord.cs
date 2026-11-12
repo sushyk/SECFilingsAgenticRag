@@ -23,38 +23,42 @@ public sealed class FilingChunkRecord
     [VectorStoreData(StorageName = "documentid", IsIndexed = true)]
     public string DocumentId { get; set; } = "";
 
-    [VectorStoreData(StorageName = "ticker", IsIndexed = true)]
+    [VectorStoreData(StorageName = FilingChunkMetadataKeys.Ticker, IsIndexed = true)]
     public string Ticker { get; set; } = "";
 
-    [VectorStoreData(StorageName = "companyname")]
+    [VectorStoreData(StorageName = FilingChunkMetadataKeys.CompanyName)]
     public string CompanyName { get; set; } = "";
 
-    [VectorStoreData(StorageName = "cik")]
+    [VectorStoreData(StorageName = FilingChunkMetadataKeys.Cik)]
     public string Cik { get; set; } = "";
 
-    [VectorStoreData(StorageName = "formtype", IsIndexed = true)]
+    [VectorStoreData(StorageName = FilingChunkMetadataKeys.FormType, IsIndexed = true)]
     public string FormType { get; set; } = "";
 
-    [VectorStoreData(StorageName = "fiscalyear", IsIndexed = true)]
+    [VectorStoreData(StorageName = FilingChunkMetadataKeys.FiscalYear, IsIndexed = true)]
     public int FiscalYear { get; set; }
 
     // Npgsql requires DateTimeKind.Utc for timestamptz.
-    [VectorStoreData(StorageName = "filingdate")]
+    [VectorStoreData(StorageName = FilingChunkMetadataKeys.FilingDate)]
     public DateTime FilingDate { get; set; }
 
-    [VectorStoreData(StorageName = "section")]
+    [VectorStoreData(StorageName = FilingChunkMetadataKeys.Section)]
     public string Section { get; set; } = "";
 
-    [VectorStoreData(StorageName = "chunkindex")]
+    [VectorStoreData(StorageName = FilingChunkMetadataKeys.ChunkIndex)]
     public int ChunkIndex { get; set; }
 
-    [VectorStoreData(StorageName = "chunkcount")]
+    [VectorStoreData(StorageName = FilingChunkMetadataKeys.ChunkCount)]
     public int ChunkCount { get; set; }
 
-    [VectorStoreData(StorageName = "containsinstructionliketext", IsIndexed = true)]
+    // Hash of the source bytes and the indexing configuration: chunks with a stale fingerprint are re-indexed.
+    [VectorStoreData(StorageName = FilingChunkMetadataKeys.IndexFingerprint)]
+    public string IndexFingerprint { get; set; } = "";
+
+    [VectorStoreData(StorageName = FilingChunkMetadataKeys.ContainsInstructionLikeText, IsIndexed = true)]
     public bool ContainsInstructionLikeText { get; set; }
 
-    [VectorStoreData(StorageName = "sourceurl")]
+    [VectorStoreData(StorageName = FilingChunkMetadataKeys.SourceUrl)]
     public string SourceUrl { get; set; } = "";
 
     [VectorStoreVector(EmbeddingModelConstants.Dimensions, StorageName = "embedding",

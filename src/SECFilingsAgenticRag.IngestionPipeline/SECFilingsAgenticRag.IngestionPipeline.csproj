@@ -1,3 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <ItemGroup>
+    <PackageReference Include="AngleSharp" />
+    <PackageReference Include="Azure.Storage.Blobs" />
+    <PackageReference Include="Microsoft.Extensions.DataIngestion" />
+    <PackageReference Include="Microsoft.Extensions.DataIngestion.Markdig" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="Microsoft.ML.Tokenizers" />
+    <PackageReference Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" />
+    <PackageReference Include="ReverseMarkdown" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SECFilingsAgenticRag.Common\SECFilingsAgenticRag.Common.csproj" />
+  </ItemGroup>
+
 </Project>
