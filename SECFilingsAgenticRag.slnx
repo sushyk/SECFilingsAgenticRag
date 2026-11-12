@@ -9,6 +9,7 @@
 
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/SECFilingsAgenticRag.AgentClient.Cli/SECFilingsAgenticRag.AgentClient.Cli.csproj" />
     <Project Path="src/SECFilingsAgenticRag.AgentServer/SECFilingsAgenticRag.AgentServer.csproj" />
     <Project Path="src/SECFilingsAgenticRag.AppHost/SECFilingsAgenticRag.AppHost.csproj" />
     <Project Path="src/SECFilingsAgenticRag.Common/SECFilingsAgenticRag.Common.csproj" />

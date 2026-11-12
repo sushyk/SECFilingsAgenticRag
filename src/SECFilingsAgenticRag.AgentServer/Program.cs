@@ -1,5 +1,7 @@
+using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
 using Microsoft.Extensions.VectorData;
 using Npgsql;
+using SECFilingsAgenticRag.AgentServer;
 using SECFilingsAgenticRag.AgentServer.Endpoints;
 using SECFilingsAgenticRag.Common.AI;
 using SECFilingsAgenticRag.Common.VectorStore;
@@ -11,6 +13,8 @@ builder.AddNpgsqlDataSource("secfilings", configureDataSourceBuilder: dataSource
 builder.Services.AddSecFilingsAI(builder.Configuration);
 builder.Services.AddSecFilingsVectorStore(EmbeddingModelConstants.QueryEmbeddingKey);
 builder.Services.AddSecFilingsRetrieval(builder.Configuration);
+builder.AddSecFilingsAgents();
+builder.Services.AddAGUIServer();
 builder.Services.AddOpenTelemetry().WithTracing(tracing => tracing.AddSource(FilingSearch.ActivitySourceName));
 builder.Services.AddProblemDetails();
 builder.Services.AddValidation();
@@ -27,4 +31,6 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 app.MapDefaultEndpoints();
 app.MapSearchEndpoints();
+app.MapAGUIServer(AgentNames.ChatOnly, $"/agents/{AgentNames.ChatOnly}");
+app.MapAGUIServer(AgentNames.StandardRag, $"/agents/{AgentNames.StandardRag}");
 app.Run();

@@ -14,8 +14,13 @@ param(
 )
 
 if (-not $BaseUrl) {
-    $described = aspire describe indexing --format json --non-interactive 2>$null | Out-String
-    $BaseUrl = [regex]::Match($described, 'https?://(localhost|127\.0\.0\.1):\d+').Value
+    # Parsed, not regex-matched: the description also carries the storage connection strings, whose Azurite URLs come first.
+    try {
+        $resource = (aspire describe indexing --format json --non-interactive 2>$null | Out-String | ConvertFrom-Json).resources |
+            Where-Object displayName -eq 'indexing'
+        $BaseUrl = ($resource.urls | Where-Object name -eq 'http' | Select-Object -First 1).url
+    }
+    catch { }
 }
 if (-not $BaseUrl) {
     Write-Error 'Cannot find the indexing endpoint. Start the AppHost, or pass -BaseUrl (the "Index: [POST]" line in the indexing log).' -ErrorAction Continue
