@@ -13,5 +13,5 @@ builder.AddNpgsqlDataSource("secfilings", configureDataSourceBuilder: dataSource
 builder.AddAzureBlobContainerClient("filings");
 builder.Services.AddSecFilingsAI(builder.Configuration);
 builder.Services.AddSecFilingsVectorStore(EmbeddingModelConstants.DocumentEmbeddingKey);
-builder.Services.AddSecFilingsIndexing(builder.Configuration);
+builder.Services.AddSecFilingsIngestion(builder.Configuration);
 builder.Build().Run();

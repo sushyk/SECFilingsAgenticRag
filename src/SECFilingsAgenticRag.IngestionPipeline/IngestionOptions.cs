@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace SECFilingsAgenticRag.IngestionPipeline;
 
-public sealed class IndexingOptions
+public sealed class IngestionOptions
 {
     public const string SectionName = "Indexing";
 

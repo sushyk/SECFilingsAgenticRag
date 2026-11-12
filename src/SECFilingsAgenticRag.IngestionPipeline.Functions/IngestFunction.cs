@@ -7,7 +7,7 @@ using SECFilingsAgenticRag.Common.Ingestion;
 
 namespace SECFilingsAgenticRag.IngestionPipeline.Functions;
 
-public sealed class IndexFunction(IIndexingService indexing, IHostApplicationLifetime lifetime)
+public sealed class IngestFunction(IIngestionService indexing, IHostApplicationLifetime lifetime)
 {
     private static readonly SemaphoreSlim Gate = new(1, 1);
 

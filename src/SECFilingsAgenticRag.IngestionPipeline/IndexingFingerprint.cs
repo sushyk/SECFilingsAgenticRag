@@ -10,8 +10,8 @@ public static class IndexingFingerprint
     // bumps when cleaning logic changes) re-indexes affected filings on the next normal run.
     public static string Compute(string sourceSha256, IConfiguration configuration)
     {
-        var settings = configuration.GetSection(IndexingOptions.SectionName).AsEnumerable(makePathsRelative: true)
-            .Where(s => s.Value is not null && !s.Key.Equals(nameof(IndexingOptions.StagingPath), StringComparison.OrdinalIgnoreCase))
+        var settings = configuration.GetSection(IngestionOptions.SectionName).AsEnumerable(makePathsRelative: true)
+            .Where(s => s.Value is not null && !s.Key.Equals(nameof(IngestionOptions.StagingPath), StringComparison.OrdinalIgnoreCase))
             .Select(s => $"{s.Key.ToLowerInvariant()}={s.Value}")
             .Order(StringComparer.Ordinal);
 

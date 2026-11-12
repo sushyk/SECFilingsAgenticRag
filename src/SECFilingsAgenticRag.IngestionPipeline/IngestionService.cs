@@ -15,12 +15,12 @@ using SECFilingsAgenticRag.Common.VectorStore;
 
 namespace SECFilingsAgenticRag.IngestionPipeline;
 
-public interface IIndexingService
+public interface IIngestionService
 {
     Task<IndexingReport> IndexAsync(IndexingRequest request, CancellationToken ct = default);
 }
 
-internal sealed class IndexingService(
+internal sealed class IngestionService(
     BlobContainerClient filings,
     VectorStore vectorStore,
     VectorStoreCollection<Guid, FilingChunkRecord> collection,
@@ -29,9 +29,9 @@ internal sealed class IndexingService(
     IEnumerable<IngestionChunkProcessor<string>> extraProcessors,
     IServiceProvider services,
     IConfiguration configuration,
-    IOptions<IndexingOptions> options,
+    IOptions<IngestionOptions> options,
     ILoggerFactory loggerFactory,
-    ILogger<IndexingService> logger) : IIndexingService
+    ILogger<IngestionService> logger) : IIngestionService
 {
     private const string DefaultMediaType = "text/html";
     private const int MaxChunksPerDocument = 100_000;
@@ -108,7 +108,7 @@ internal sealed class IndexingService(
 
         try
         {
-            var metadataProcessor = new FilingMetadataProcessor(staged);
+            var metadataEnricher = new FilingChunkMetadataEnricher(staged);
             var writer = new VectorStoreWriter<string>(vectorStore, EmbeddingModelConstants.Dimensions, new VectorStoreWriterOptions
             {
                 CollectionName = FilingChunkRecord.CollectionName,
@@ -119,14 +119,14 @@ internal sealed class IndexingService(
 
             // The pipeline disposes its writer, so each group gets its own.
             using var pipeline = new IngestionPipeline<string>(reader, chunker, writer, loggerFactory: loggerFactory);
-            foreach (var processor in extraProcessors.Append(cleaning).Append(metadataProcessor))
+            foreach (var processor in extraProcessors.Append(cleaning).Append(metadataEnricher))
                 pipeline.ChunkProcessors.Add(processor);
 
             var clock = Stopwatch.StartNew();
             await foreach (var result in pipeline.ProcessAsync(group.Select(filing => filing.File), ct))
             {
                 var documentId = StagedFiling.DocumentIdOf(result.DocumentId);
-                var chunkCount = metadataProcessor.ChunkCounts.GetValueOrDefault(documentId);
+                var chunkCount = metadataEnricher.ChunkCounts.GetValueOrDefault(documentId);
                 results.Add(result.Exception is not null ? Failed(documentId, result.Exception.Message)
                     : chunkCount == 0 ? Failed(documentId, "no chunks produced")
                     : new(documentId, DocumentIndexingStatus.Indexed, chunkCount, clock.Elapsed, null));

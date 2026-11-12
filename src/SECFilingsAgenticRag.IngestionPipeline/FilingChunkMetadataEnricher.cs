@@ -7,7 +7,7 @@ namespace SECFilingsAgenticRag.IngestionPipeline;
 // No built-in processor stamps known metadata: IngestionDocument has no metadata bag, so per-filing values must be attached
 // to chunks. It runs last and gives every chunk the same keys with non-null values, because VectorStoreWriter derives the
 // table schema from the first chunk's metadata types.
-public sealed class FilingMetadataProcessor(IReadOnlyDictionary<string, StagedFiling> filingsByDocumentId) : IngestionChunkProcessor<string>
+public sealed class FilingChunkMetadataEnricher(IReadOnlyDictionary<string, StagedFiling> filingsByDocumentId) : IngestionChunkProcessor<string>
 {
     private const int MaxSectionLength = 200;
     private const string NoSection = "(no section)";
