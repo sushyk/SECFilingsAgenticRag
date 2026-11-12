@@ -1,8 +1,10 @@
+using System.Text.Json;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Hosting;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
+using SECFilingsAgenticRag.AgentServer.Tools;
 using SECFilingsAgenticRag.Common.VectorStore;
 using SECFilingsAgenticRag.RetrievalPipeline;
 
@@ -25,7 +27,49 @@ public static class AgentHostingExtensions
         builder.AddAIAgent(AgentNames.StandardRag, (sp, name) => CreateAgent(sp, name, Prompts.StandardRag, CreateFilingSearch(sp)))
             .WithInMemorySessionStore(withIsolation: false);
 
+        builder.Services.AddMemoryCache();
+        builder.Services.AddSingleton<FilingTools>();
+        builder.AddAIAgent(AgentNames.AgenticRag, CreateAgenticRag)
+            .WithInMemorySessionStore(withIsolation: false);
+
         return builder;
+    }
+
+    // Agentic RAG: the model decides whether, what and how often to search. UseProvidedChatClientAsIs stops ChatClientAgent from
+    // adding its own default FunctionInvokingChatClient, so ours, which carries the iteration cap, is the only tool loop.
+    private static AIAgent CreateAgenticRag(IServiceProvider sp, string name)
+    {
+        var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+        var maxToolIterations = sp.GetRequiredService<IOptions<AgentOptions>>().Value.MaxToolIterations;
+
+        return sp.GetRequiredService<IChatClient>().AsBuilder()
+            .UseFunctionInvocation(loggerFactory, invoker =>
+            {
+                invoker.MaximumIterationsPerRequest = maxToolIterations;
+                // Below the default of 3: on CPU every failed round trip costs tens of seconds.
+                invoker.MaximumConsecutiveErrorsPerRequest = 2;
+                // Small models send optional arguments as the string "null" (measured with llama3.2), which fails binding. The generic
+                // "Function failed." made the model answer from memory; this message makes it retry. Other errors stay generic.
+                invoker.FunctionInvoker = async (context, ct) =>
+                {
+                    try
+                    {
+                        return await context.Function.InvokeAsync(context.Arguments, ct);
+                    }
+                    catch (JsonException)
+                    {
+                        return "Error: the arguments do not match the tool schema. Send numbers as JSON numbers and omit optional " +
+                               "parameters you have no value for; never send the string \"null\".";
+                    }
+                };
+            })
+            .Build(sp)
+            .AsAIAgent(new ChatClientAgentOptions
+            {
+                Name = name,
+                UseProvidedChatClientAsIs = true,
+                ChatOptions = new() { Instructions = Prompts.AgenticRag, Tools = sp.GetRequiredService<FilingTools>().AsTools() },
+            }, loggerFactory, sp);
     }
 
     private static AIAgent CreateAgent(IServiceProvider sp, string name, string instructions, params AIContextProvider[] contextProviders) =>

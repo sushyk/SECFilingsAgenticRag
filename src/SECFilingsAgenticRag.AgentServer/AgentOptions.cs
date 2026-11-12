@@ -14,4 +14,8 @@ public sealed class AgentOptions
     // Follow-ups like "which of those…" only retrieve well when earlier user turns are part of the search input.
     [Range(0, 20)]
     public int RecentMessageMemoryLimit { get; set; } = 4;
+
+    // Caps model round trips per agentic-rag run (Learn: 5-10 is typical); each one costs tens of seconds on CPU.
+    [Range(1, 20)]
+    public int MaxToolIterations { get; set; } = 6;
 }
