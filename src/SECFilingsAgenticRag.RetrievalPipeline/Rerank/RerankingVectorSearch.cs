@@ -37,8 +37,10 @@ public sealed class RerankingVectorSearch(
             yield break;
         }
 
+        using var activity = FilingSearch.ActivitySource.StartActivity("retrieval.rerank");
         var candidates = await inner.SearchAsync(question, Math.Max(options.Rerank.CandidatePool, top), searchOptions, cancellationToken)
             .Select(hit => hit.Record).ToListAsync(cancellationToken);
+        activity?.SetTag("secfilings.candidate_count", candidates.Count);
         var ranking = candidates.Count > 1 ? await RankAsync(question, candidates, cancellationToken) : null;
 
         // Small models drop or invent ids: unknown and repeated ids are ignored and unranked candidates keep their original order.

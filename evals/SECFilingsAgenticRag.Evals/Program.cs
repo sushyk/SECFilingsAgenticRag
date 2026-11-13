@@ -39,9 +39,12 @@ builder.Services.AddOptions<EvalOptions>().BindConfiguration(EvalOptions.Section
         options.ResultsPath = Path.GetFullPath(options.ResultsPath, builder.Environment.ContentRootPath);
     })
     .ValidateDataAnnotations().ValidateOnStart();
-builder.Services.AddOptions<JudgeOptions>().BindConfiguration(JudgeOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
+builder.Services.AddOptions<JudgeOptions>().BindConfiguration(JudgeOptions.SectionName).ValidateDataAnnotations()
+    .Validate(judge => judge.Provider != JudgeProvider.OpenAICompatible || judge.Endpoint is not null,
+        $"{JudgeOptions.SectionName}:Endpoint is required for the OpenAICompatible judge.")
+    .ValidateOnStart();
 builder.Services.AddKeyedChatClient(JudgeOptions.ServiceKey,
-    sp => sp.GetRequiredService<IOptions<JudgeOptions>>().Value.CreateClient(sp, builder.Configuration));
+    sp => sp.GetRequiredService<IOptions<JudgeOptions>>().Value.CreateClient(sp));
 
 // The evals app is a host, so it owns the connection (libraries never open one).
 builder.Services.AddSingleton(_ =>

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.VectorData;
 using SECFilingsAgenticRag.Common.AI;
 using SECFilingsAgenticRag.Common.Filings;
 using SECFilingsAgenticRag.Common.Ingestion;
+using SECFilingsAgenticRag.Common.Telemetry;
 using SECFilingsAgenticRag.Common.VectorStore;
 
 namespace SECFilingsAgenticRag.IngestionPipeline;
@@ -36,8 +38,14 @@ internal sealed class IngestionService(
     private const string DefaultMediaType = "text/html";
     private const int MaxChunksPerDocument = 100_000;
 
+    private static readonly ActivitySource ActivitySource = new(TelemetryNames.Ingestion);
+    private static readonly Meter Meter = new(TelemetryNames.Ingestion);
+    private static readonly Counter<long> Documents = Meter.CreateCounter<long>("secfilings.ingestion.documents");
+    private static readonly Histogram<double> Duration = Meter.CreateHistogram<double>("secfilings.ingestion.duration", "s");
+
     public async Task<IndexingReport> IndexAsync(IndexingRequest request, CancellationToken ct = default)
     {
+        using var activity = ActivitySource.StartActivity("indexing.run");
         var startedAt = DateTimeOffset.UtcNow;
         var clock = Stopwatch.StartNew();
         var results = new List<DocumentIndexingResult>();
@@ -55,6 +63,11 @@ internal sealed class IngestionService(
             DeleteStagingRoot(stagingRoot);
         }
 
+        foreach (var status in Enum.GetValues<DocumentIndexingStatus>())
+            activity?.SetTag($"secfilings.{status.ToString().ToLowerInvariant()}", results.Count(r => r.Status == status));
+        foreach (var result in results)
+            Documents.Add(1, new KeyValuePair<string, object?>("status", result.Status.ToString()));
+        Duration.Record(clock.Elapsed.TotalSeconds);
         return new IndexingReport(startedAt, clock.Elapsed, results);
     }
 
@@ -132,6 +145,7 @@ internal sealed class IngestionService(
                     : new(documentId, DocumentIndexingStatus.Indexed, chunkCount, clock.Elapsed, null));
                 logger.LogInformation("{Status} {DocumentId} chunks={ChunkCount} in {Duration}",
                     results[^1].Status, documentId, chunkCount, clock.Elapsed);
+                TraceDocument(results[^1], staged.GetValueOrDefault(documentId)?.Metadata.Ticker, clock.Elapsed);
                 clock.Restart();
             }
         }
@@ -142,6 +156,17 @@ internal sealed class IngestionService(
                 .Where(filing => results.All(r => r.DocumentId != filing.Metadata.DocumentId))
                 .Select(filing => Failed(filing.Metadata.DocumentId, ex.Message)));
         }
+    }
+
+    // The pipeline reports a document only after processing it, so its span is recorded afterwards with the measured start.
+    private static void TraceDocument(DocumentIndexingResult result, string? ticker, TimeSpan elapsed)
+    {
+        using var activity = ActivitySource.StartActivity(
+            "indexing.document", ActivityKind.Internal, Activity.Current?.Context ?? default, startTime: DateTimeOffset.UtcNow - elapsed);
+        activity?.SetTag("secfilings.document_id", result.DocumentId).SetTag("secfilings.ticker", ticker)
+            .SetTag("secfilings.status", result.Status.ToString()).SetTag("secfilings.chunk_count", result.ChunkCount);
+        if (result.Error is not null)
+            activity?.SetStatus(ActivityStatusCode.Error, result.Error);
     }
 
     private async Task<List<BlobItem>> ListBlobsAsync(IReadOnlyList<string>? tickers, CancellationToken ct)

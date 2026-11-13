@@ -29,6 +29,8 @@
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="Pgvector" Version="0.3.2" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.14" />
+    <!-- 10.0.14, not the newer 10.0.15: kept on the patch level of every other Microsoft.Extensions.* package -->
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="10.0.14" />
 
     <!-- IngestionInit -->
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.14" />

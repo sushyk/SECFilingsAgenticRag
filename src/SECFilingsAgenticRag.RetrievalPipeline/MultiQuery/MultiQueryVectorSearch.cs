@@ -33,6 +33,7 @@ public sealed class MultiQueryVectorSearch(
             yield break;
         }
 
+        using var activity = FilingSearch.ActivitySource.StartActivity("retrieval.multi_query");
         var variants = await StructuredOutput.TryGetAsync<QueryVariants>(chat,
             [new(ChatRole.System, Instructions), new(ChatRole.User, $"Write {options.MultiQuery.Variants} queries for: {question}")],
             ChatOptions, logger, cancellationToken);
@@ -44,6 +45,7 @@ public sealed class MultiQueryVectorSearch(
         foreach (var query in queries)
             rankings.Add(await inner.SearchAsync(query, top, searchOptions, cancellationToken).Select(hit => hit.Record).ToListAsync(cancellationToken));
 
+        activity?.SetTag("secfilings.query_count", rankings.Count).SetTag("secfilings.candidate_count", rankings.Sum(r => r.Count));
         foreach (var hit in RrfFusion.Fuse(rankings, options.Hybrid.RrfK).Take(top))
             yield return hit;
     }

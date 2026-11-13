@@ -1,4 +1,3 @@
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,6 +23,8 @@ public static class RetrievalServiceCollectionExtensions
         services.AddOptions<RetrievalOptions>()
             .Bind(configuration.GetSection(RetrievalOptions.SectionName))
             .ValidateDataAnnotations()
+            .Validate(options => options.Rerank.CandidatePool >= options.DefaultTop,
+                $"{RetrievalOptions.SectionName}:Rerank:CandidatePool must be at least DefaultTop: the reranker can only reorder what it was given.")
             .Validate<IServiceProviderIsKeyedService>(
                 (options, container) => container.IsKeyedService(typeof(IVectorSearchable<FilingChunkRecord>), options.Strategy),
                 $"{RetrievalOptions.SectionName}:Strategy must be one of: {string.Join(", ", Strategies)}.")
@@ -39,10 +40,10 @@ public static class RetrievalServiceCollectionExtensions
             var options = Options(sp);
             var search = sp.GetRequiredKeyedService<IVectorSearchable<FilingChunkRecord>>(options.Strategy);
             if (options.MultiQuery.Enabled)
-                search = new MultiQueryVectorSearch(search, ChatClient(sp, configuration, options.MultiQuery.Model), options,
+                search = new MultiQueryVectorSearch(search, ChatClientFactory.ForModel(sp, options.MultiQuery.Model), options,
                     sp.GetRequiredService<ILogger<MultiQueryVectorSearch>>());
             if (options.Rerank.Enabled)
-                search = new RerankingVectorSearch(search, ChatClient(sp, configuration, options.Rerank.Model), options,
+                search = new RerankingVectorSearch(search, ChatClientFactory.ForModel(sp, options.Rerank.Model), options,
                     sp.GetRequiredService<ILogger<RerankingVectorSearch>>());
             return search;
         });
@@ -52,6 +53,4 @@ public static class RetrievalServiceCollectionExtensions
 
     private static RetrievalOptions Options(IServiceProvider sp) => sp.GetRequiredService<IOptions<RetrievalOptions>>().Value;
 
-    private static IChatClient ChatClient(IServiceProvider sp, IConfiguration configuration, string? model) =>
-        string.IsNullOrWhiteSpace(model) ? sp.GetRequiredService<IChatClient>() : ChatClientFactory.Create(sp, configuration, model);
 }

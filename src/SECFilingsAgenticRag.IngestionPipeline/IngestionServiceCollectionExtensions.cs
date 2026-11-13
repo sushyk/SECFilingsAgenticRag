@@ -19,8 +19,6 @@ public static class IngestionServiceCollectionExtensions
 
         services.AddKeyedSingleton<IngestionDocumentReader, HtmlFilingReader>("text/html");
 
-        // cl100k only approximates the embedding model's own tokenizer, which is close enough to size chunks.
-        services.AddSingleton<Tokenizer>(_ => TiktokenTokenizer.CreateForEncoding("cl100k_base"));
         services.AddSingleton<IngestionChunker<string>>(sp => new HeaderChunker(new IngestionChunkerOptions(sp.GetRequiredService<Tokenizer>())
         {
             MaxTokensPerChunk = sp.GetRequiredService<IOptions<IngestionOptions>>().Value.MaxTokensPerChunk,

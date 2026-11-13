@@ -19,8 +19,9 @@ var filings = storage.AddBlobContainer("filings");
 // Ollama runs natively, not as a container; the endpoint comes from ConnectionStrings:ollama.
 var ollama = builder.AddConnectionString("ollama");
 
-// The embedding model is fixed in code (EmbeddingModelConstants); only the chat model is configurable.
+// The single source of model names under Aspire. Indexing and query must embed with the same model, so both get one parameter.
 var chatModel = builder.AddParameter("chat-model");
+var embeddingModel = builder.AddParameter("embedding-model");
 
 // The SEC requires "<Name> <email>" as User-Agent; it is personal data, so it lives in AppHost user-secrets.
 // A required parameter would keep ingestion-init from starting until someone fills it in; empty lets the job log the fix instead.
@@ -41,7 +42,7 @@ builder.AddAzureFunctionsProject<Projects.SECFilingsAgenticRag_IngestionPipeline
     .WithReference(db).WaitFor(db)
     .WithReference(filings).WaitFor(filings)
     .WithReference(ollama)
-    .WithEnvironment("AI__Chat__Model", chatModel)
+    .WithAIModels(chatModel, embeddingModel)
     .WithHttpCommand("/api/index", "Re-index filings", commandName: "reindex",
         commandOptions: ReindexOptions(force: false, "Index new or changed filings; unchanged ones are skipped"))
     .WithHttpCommand("/api/index", "Force re-index all filings", commandName: "reindex-force",
@@ -52,7 +53,7 @@ builder.AddAzureFunctionsProject<Projects.SECFilingsAgenticRag_IngestionPipeline
 builder.AddProject<Projects.SECFilingsAgenticRag_AgentServer>("api")
     .WithReference(db).WaitFor(db)
     .WithReference(ollama)
-    .WithEnvironment("AI__Chat__Model", chatModel)
+    .WithAIModels(chatModel, embeddingModel)
     .WithExternalHttpEndpoints();
 
 // Explicit start: an eval run takes minutes to hours on CPU, so it runs only when asked (aspire resource evals-retrieval start).
@@ -61,7 +62,7 @@ foreach (var (name, command) in new[] { ("evals-retrieval", "retrieval"), ("eval
         .WithArgs(command)
         .WithReference(db).WaitFor(db)
         .WithReference(ollama)
-        .WithEnvironment("AI__Chat__Model", chatModel)
+        .WithAIModels(chatModel, embeddingModel)
         .WithExplicitStart();
 
 builder.Build().Run();
@@ -78,3 +79,10 @@ static HttpCommandOptions ReindexOptions(bool force, string description, string?
         return Task.CompletedTask;
     },
 };
+
+static class AIModelParameters
+{
+    public static IResourceBuilder<T> WithAIModels<T>(this IResourceBuilder<T> resource,
+        IResourceBuilder<ParameterResource> chatModel, IResourceBuilder<ParameterResource> embeddingModel) where T : IResourceWithEnvironment =>
+        resource.WithEnvironment("AI__Chat__Model", chatModel).WithEnvironment("AI__Embedding__Model", embeddingModel);
+}

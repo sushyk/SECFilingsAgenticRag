@@ -32,7 +32,7 @@ public sealed class RetrievalMatrixRunner(
         var chatModel = configuration["AI:Chat:Model"];
         var report = new MarkdownReport("Retrieval evaluation")
             .Line($"- Date: {DateTime.Now:yyyy-MM-dd HH:mm}")
-            .Line($"- Embedding model: {EmbeddingModelConstants.Name}; rerank model: {retrieval.Rerank.Model ?? chatModel}; " +
+            .Line($"- Embedding model: {configuration["AI:Embedding:Model"]}; rerank model: {retrieval.Rerank.Model ?? chatModel}; " +
                   $"multi-query model: {retrieval.MultiQuery.Model ?? chatModel}")
             .Line($"- Corpus: {documents} documents, {chunks} chunks; {dataset.Questions.Count} questions")
             .Line()

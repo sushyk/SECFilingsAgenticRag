@@ -3,8 +3,8 @@ using Microsoft.Extensions.Logging;
 
 namespace SECFilingsAgenticRag.RetrievalPipeline;
 
-// Shared by the LLM decorators: retrieval must never fail because a model misbehaved, so every model failure becomes null.
-internal static class StructuredOutput
+// Shared by the LLM decorators and the topic guard: neither may fail because a model misbehaved, so every model failure becomes null.
+public static class StructuredOutput
 {
     // Learn: a JSON schema response format "might cause an error if the model does not support it"; without it, MEAI puts
     // the schema into the prompt instead. So the schema is tried first and the prompt-only mode once as a fallback.

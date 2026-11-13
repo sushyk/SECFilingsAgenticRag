@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
@@ -17,6 +18,14 @@ public static class Extensions
 {
     private const string HealthEndpointPath = "/health";
     private const string AlivenessEndpointPath = "/alive";
+
+    // The exact names passed to UseOpenTelemetry, ActivitySource and Meter (SECFilingsAgenticRag.Common.Telemetry.TelemetryNames;
+    // ServiceDefaults cannot reference Common). The Experimental.* names are the MEAI/MAF defaults when no source name is given.
+    private static readonly string[] TelemetrySources =
+    [
+        "SECFilingsAgenticRag.AI", "SECFilingsAgenticRag.AgentServer", "SECFilingsAgenticRag.IngestionPipeline", "SECFilingsAgenticRag.RetrievalPipeline",
+        "Experimental.Microsoft.Extensions.AI*", "Experimental.Microsoft.Agents.AI*",
+    ];
 
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
@@ -57,11 +66,13 @@ public static class Extensions
             {
                 metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation();
+                    .AddRuntimeInstrumentation()
+                    .AddMeter([.. TelemetrySources, "Microsoft.Extensions.AI*"]);
             })
             .WithTracing(tracing =>
             {
                 tracing.AddSource(builder.Environment.ApplicationName)
+                    .AddSource(TelemetrySources)
                     .AddAspNetCoreInstrumentation(tracing =>
                         // Exclude health check requests from tracing
                         tracing.Filter = context =>
@@ -112,8 +123,17 @@ public static class Extensions
         // See https://aka.ms/dotnet/aspire/healthchecks for details before enabling these endpoints in non-development environments.
         if (app.Environment.IsDevelopment())
         {
-            // All health checks must pass for app to be considered ready to accept traffic after starting
-            app.MapHealthChecks(HealthEndpointPath);
+            // All health checks must pass for app to be considered ready to accept traffic after starting.
+            // Per-check descriptions say what is wrong (e.g. which model Ollama has not pulled); the default writer prints only the status.
+            app.MapHealthChecks(HealthEndpointPath, new HealthCheckOptions
+            {
+                ResponseWriter = (context, report) => context.Response.WriteAsJsonAsync(new
+                {
+                    status = report.Status.ToString(),
+                    checks = report.Entries.ToDictionary(entry => entry.Key,
+                        entry => new { status = entry.Value.Status.ToString(), description = entry.Value.Description }),
+                }),
+            });
 
             // Only health checks tagged with the "live" tag must pass for app to be considered alive
             app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions

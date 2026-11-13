@@ -1,38 +1,37 @@
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OllamaSharp;
 using OllamaSharp.Models;
+using SECFilingsAgenticRag.Common.Telemetry;
 
 namespace SECFilingsAgenticRag.Common.AI;
 
-// Custom (no built-in fits): AddChatClient registers one client per container, but the reranker, query rewriter and eval judge
-// may each run a different model on the same Ollama endpoint with the same logging and telemetry pipeline.
+// Custom (no built-in fits): AddChatClient registers one client per container, but the reranker, query rewriter, topic guard and
+// eval judge may each run a different model on the same Ollama endpoint with the same logging and telemetry pipeline.
 public static class ChatClientFactory
 {
-    // Local CPU inference is slow, and ServiceDefaults attach a 10 s / 30 s resilience handler to IHttpClientFactory
-    // clients, which would kill these calls. That is why Ollama gets a dedicated HttpClient.
-    private static readonly TimeSpan OllamaTimeout = TimeSpan.FromMinutes(10);
+    public const string OllamaHttpClientName = "ollama";
 
-    public static IChatClient Create(IServiceProvider services, IConfiguration configuration, string model)
+    public static IChatClient Create(IServiceProvider services, string model)
     {
-        // Ollama silently drops the start of a prompt longer than its default window (measured: a 4,132-token rerank prompt
-        // cut to 2,050), which removes the instructions and the question first. Retrieved sources need a larger window.
-        var contextLength = configuration["AI:Chat:ContextLength"];
-        return new ChatClientBuilder(new OllamaApiClient(NewOllamaHttpClient(configuration), model))
+        var contextLength = services.GetRequiredService<IOptions<ChatModelOptions>>().Value.ContextLength;
+        var telemetry = services.GetRequiredService<IOptions<TelemetryOptions>>().Value;
+        return new ChatClientBuilder(new OllamaApiClient(OllamaHttpClient(services), model))
             .ConfigureOptions(options =>
             {
                 if (contextLength is not null)
-                    options.AddOllamaOption(OllamaOption.NumCtx, int.Parse(contextLength));
+                    options.AddOllamaOption(OllamaOption.NumCtx, contextLength.Value);
             })
             .UseLogging()
-            .UseOpenTelemetry()
+            .UseOpenTelemetry(sourceName: TelemetryNames.AI, configure: otel => otel.EnableSensitiveData = telemetry.EnableSensitiveData)
             .Build(services);
     }
 
-    internal static HttpClient NewOllamaHttpClient(IConfiguration configuration) => new()
-    {
-        BaseAddress = new Uri(configuration.GetConnectionString("ollama")
-            ?? throw new InvalidOperationException("ConnectionStrings:ollama is not configured, e.g. \"http://localhost:11434\".")),
-        Timeout = OllamaTimeout,
-    };
+    // An unset per-feature model override means the registered AI:Chat client.
+    public static IChatClient ForModel(IServiceProvider services, string? model) =>
+        string.IsNullOrWhiteSpace(model) ? services.GetRequiredService<IChatClient>() : Create(services, model);
+
+    public static HttpClient OllamaHttpClient(IServiceProvider services) =>
+        services.GetRequiredService<IHttpClientFactory>().CreateClient(OllamaHttpClientName);
 }

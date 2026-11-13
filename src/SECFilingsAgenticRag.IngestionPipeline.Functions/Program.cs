@@ -1,4 +1,5 @@
 using Microsoft.Azure.Functions.Worker.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Pgvector.Npgsql;
@@ -14,4 +15,5 @@ builder.AddAzureBlobContainerClient("filings");
 builder.Services.AddSecFilingsAI(builder.Configuration);
 builder.Services.AddSecFilingsVectorStore(EmbeddingModelConstants.DocumentEmbeddingKey);
 builder.Services.AddSecFilingsIngestion(builder.Configuration);
+builder.Services.AddHealthChecks().AddCheck<OllamaHealthCheck>("ollama", tags: ["ready"]);
 builder.Build().Run();

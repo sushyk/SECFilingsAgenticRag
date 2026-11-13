@@ -26,11 +26,8 @@ public static class SearchEndpoints
 {
     private const int LoggedQueryLength = 80;
 
-    public static IEndpointRouteBuilder MapSearchEndpoints(this IEndpointRouteBuilder endpoints)
-    {
+    public static RouteHandlerBuilder MapSearchEndpoints(this IEndpointRouteBuilder endpoints) =>
         endpoints.MapPost("/api/search", SearchAsync).ProducesValidationProblem();
-        return endpoints;
-    }
 
     private static async Task<Ok<SearchResponse>> SearchAsync(
         SearchRequest request, IVectorSearchable<FilingChunkRecord> search, IOptions<RetrievalOptions> retrievalOptions,

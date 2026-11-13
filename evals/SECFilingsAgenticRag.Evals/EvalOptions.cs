@@ -41,9 +41,9 @@ public sealed class JudgeOptions
     [Range(1, 3600)]
     public int TimeoutSeconds { get; set; } = 300;
 
-    public IChatClient CreateClient(IServiceProvider services, IConfiguration configuration) => Provider switch
+    public IChatClient CreateClient(IServiceProvider services) => Provider switch
     {
-        JudgeProvider.Ollama => ChatClientFactory.Create(services, configuration, Model!),
+        JudgeProvider.Ollama => ChatClientFactory.Create(services, Model!),
         _ => new OpenAI.Chat.ChatClient(Model,
                 new ApiKeyCredential(ApiKey ?? throw new InvalidOperationException(
                     "Evals:Judge:ApiKey is required for the OpenAICompatible judge: set it with dotnet user-secrets or Evals__Judge__ApiKey.")),
