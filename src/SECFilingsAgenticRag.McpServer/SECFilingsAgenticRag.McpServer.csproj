@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Npgsql" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SECFilingsAgenticRag.Common\SECFilingsAgenticRag.Common.csproj" />
+    <ProjectReference Include="..\SECFilingsAgenticRag.RetrievalPipeline\SECFilingsAgenticRag.RetrievalPipeline.csproj" />
+    <ProjectReference Include="..\SECFilingsAgenticRag.ServiceDefaults\SECFilingsAgenticRag.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,27 @@
+<Solution>
+  <Folder Name="/SolutionItems/">
+    <File Path=".gitignore" />
+    <File Path="CLAUDE.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+
+  </Folder>
+  <Folder Name="/evals/">
+    <Project Path="evals/SECFilingsAgenticRag.Evals/SECFilingsAgenticRag.Evals.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/SECFilingsAgenticRag.AgentClient.Cli/SECFilingsAgenticRag.AgentClient.Cli.csproj" />
+    <Project Path="src/SECFilingsAgenticRag.AgentServer/SECFilingsAgenticRag.AgentServer.csproj" />
+    <Project Path="src/SECFilingsAgenticRag.AppHost/SECFilingsAgenticRag.AppHost.csproj" />
+    <Project Path="src/SECFilingsAgenticRag.Common/SECFilingsAgenticRag.Common.csproj" />
+    <Project Path="src/SECFilingsAgenticRag.IngestionInit/SECFilingsAgenticRag.IngestionInit.csproj" />
+    <Project Path="src/SECFilingsAgenticRag.IngestionPipeline/SECFilingsAgenticRag.IngestionPipeline.csproj" />
+    <Project Path="src/SECFilingsAgenticRag.IngestionPipeline.Functions/SECFilingsAgenticRag.IngestionPipeline.Functions.csproj" />
+    <Project Path="src/SECFilingsAgenticRag.McpServer/SECFilingsAgenticRag.McpServer.csproj" />
+    <Project Path="src/SECFilingsAgenticRag.RetrievalPipeline/SECFilingsAgenticRag.RetrievalPipeline.csproj" />
+    <Project Path="src/SECFilingsAgenticRag.ServiceDefaults/SECFilingsAgenticRag.ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+</Solution>

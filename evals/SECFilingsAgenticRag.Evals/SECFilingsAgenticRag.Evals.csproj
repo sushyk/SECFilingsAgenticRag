@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>5b0e8f7c-2a4d-4c39-9d1e-6f3b7a2c8e41</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Paths in appsettings.json are relative to the project, however and from wherever the app is started. -->
+    <AssemblyMetadata Include="ProjectDirectory" Value="$(MSBuildProjectDirectory)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.Extensions.Configuration" />
+    <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <Using Include="Microsoft.Extensions.Hosting" />
+    <Using Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.AI.Evaluation.Quality" />
+    <PackageReference Include="Microsoft.Extensions.AI.Evaluation.Reporting" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SECFilingsAgenticRag.Common\SECFilingsAgenticRag.Common.csproj" />
+    <ProjectReference Include="..\..\src\SECFilingsAgenticRag.RetrievalPipeline\SECFilingsAgenticRag.RetrievalPipeline.csproj" />
+    <ProjectReference Include="..\..\src\SECFilingsAgenticRag.AgentServer\SECFilingsAgenticRag.AgentServer.csproj" />
+  </ItemGroup>
+
+</Project>

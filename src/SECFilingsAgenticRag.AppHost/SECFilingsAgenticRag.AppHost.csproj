@@ -1,0 +1,23 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.6.4">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>22839ec6-503c-4a18-9053-a4334dc40b73</UserSecretsId>
+    <AspireUseCliBundle>true</AspireUseCliBundle>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <PackageReference Include="Aspire.Hosting.Azure.Storage" />
+    <PackageReference Include="Aspire.Hosting.Azure.Functions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SECFilingsAgenticRag.AgentServer\SECFilingsAgenticRag.AgentServer.csproj" />
+    <ProjectReference Include="..\..\evals\SECFilingsAgenticRag.Evals\SECFilingsAgenticRag.Evals.csproj" />
+    <ProjectReference Include="..\SECFilingsAgenticRag.IngestionInit\SECFilingsAgenticRag.IngestionInit.csproj" />
+    <ProjectReference Include="..\SECFilingsAgenticRag.IngestionPipeline.Functions\SECFilingsAgenticRag.IngestionPipeline.Functions.csproj" />
+    <ProjectReference Include="..\SECFilingsAgenticRag.McpServer\SECFilingsAgenticRag.McpServer.csproj" />
+  </ItemGroup>
+
+</Project>
