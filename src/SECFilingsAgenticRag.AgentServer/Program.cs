@@ -3,17 +3,15 @@ using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
-using ModelContextProtocol.Server;
 using Npgsql;
 using SECFilingsAgenticRag.AgentServer;
 using SECFilingsAgenticRag.AgentServer.Endpoints;
-using SECFilingsAgenticRag.AgentServer.Tools;
 using SECFilingsAgenticRag.Common.AI;
 using SECFilingsAgenticRag.Common.VectorStore;
 using SECFilingsAgenticRag.RetrievalPipeline;
+using SECFilingsAgenticRag.RetrievalPipeline.Tools;
 
 const string ChatPolicy = "chat";
 const string SearchPolicy = "search";
@@ -26,16 +24,9 @@ builder.Services.AddSecFilingsVectorStore(EmbeddingModelConstants.QueryEmbedding
 builder.Services.AddSecFilingsRetrieval(builder.Configuration);
 builder.AddSecFilingsAgents();
 builder.Services.AddAGUIServer();
-builder.Services.AddMcpServer().WithHttpTransport();
-// WithTools only takes ready-made tools, but FilingTools comes from DI. Wrapping the agentic-rag AIFunctions keeps one definition:
-// MCP clients get the same names, descriptions, schema, argument validation and cite tags as the agent.
-builder.Services.AddOptions<McpServerOptions>().Configure<FilingTools>((options, tools) =>
-{
-    options.ToolCollection ??= [];
-    foreach (AIFunction tool in tools.AsTools())
-        options.ToolCollection.Add(McpServerTool.Create(tool));
-});
-// Browser-hosted MCP clients (GitHub Copilot in VS Code for the web, Codespaces) call /mcp cross-origin; none are allowed by default.
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<FilingTools>();
+// A browser-hosted UI (Phase 12) calls /agents/* and /api/* cross-origin; none are allowed by default.
 builder.Services.AddCors(cors => cors.AddDefaultPolicy(policy => policy
     .WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? []).AllowAnyHeader().AllowAnyMethod()));
 builder.Services.AddHealthChecks().AddCheck<OllamaHealthCheck>("ollama", tags: ["ready"]);
@@ -91,6 +82,4 @@ foreach (var agent in new[] { AgentNames.ChatOnly, AgentNames.StandardRag, Agent
         .WithMetadata(requestSizeLimit);
 
 app.MapGet("/api/filings", async (FilingTools tools, CancellationToken ct) => TypedResults.Ok(await tools.ListFilingsAsync(ct)));
-// Streamable HTTP keeps a GET open for server-to-client messages; the 30 s default would cut it on every client.
-app.MapMcp("/mcp").DisableRequestTimeout();
 app.Run();

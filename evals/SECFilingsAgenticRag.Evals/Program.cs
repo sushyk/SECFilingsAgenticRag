@@ -58,8 +58,8 @@ builder.Services.AddSecFilingsAI(builder.Configuration);
 builder.Services.AddSecFilingsVectorStore(EmbeddingModelConstants.QueryEmbeddingKey);
 builder.Services.AddSecFilingsRetrieval(builder.Configuration);
 
-// Wraps the composed search after AddSecFilingsRetrieval; the last registration wins, so the agents' context provider and
-// tools search through the recorder.
+// Wraps the composed search after AddSecFilingsRetrieval; the last registration wins, so standard-rag's context provider
+// searches through the recorder.
 var composed = builder.Services.Last(d => d.ServiceType == typeof(IVectorSearchable<FilingChunkRecord>) && !d.IsKeyedService);
 builder.Services.AddSingleton(sp => new RecordingVectorSearch((IVectorSearchable<FilingChunkRecord>)composed.ImplementationFactory!(sp)));
 builder.Services.AddSingleton<IVectorSearchable<FilingChunkRecord>>(sp => sp.GetRequiredService<RecordingVectorSearch>());

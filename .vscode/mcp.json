@@ -2,7 +2,7 @@
   "servers": {
     "secfilings": {
       "type": "http",
-      "url": "http://localhost:5180/mcp"
+      "url": "http://localhost:5190/mcp"
     }
   }
 }

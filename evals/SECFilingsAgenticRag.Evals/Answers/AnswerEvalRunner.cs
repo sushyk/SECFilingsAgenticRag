@@ -8,7 +8,7 @@ using Microsoft.Extensions.AI.Evaluation.Reporting;
 using Microsoft.Extensions.AI.Evaluation.Reporting.Storage;
 using Microsoft.Extensions.Options;
 using SECFilingsAgenticRag.AgentServer;
-using SECFilingsAgenticRag.AgentServer.Tools;
+using SECFilingsAgenticRag.RetrievalPipeline.Tools;
 using SECFilingsAgenticRag.Evals.Dataset;
 using SECFilingsAgenticRag.Evals.Reporting;
 
@@ -81,7 +81,10 @@ public sealed partial class AnswerEvalRunner(
         var started = Stopwatch.GetTimestamp();
         var response = await agent.RunAsync(question.Question, await agent.CreateSessionAsync(ct), cancellationToken: ct);
         var seconds = Stopwatch.GetElapsedTime(started).TotalSeconds;
-        var retrieved = recorder.TakeRetrieved();
+        // agentic-rag searches inside the mcp process, out of the recorder's reach; what it saw are its tool results.
+        var retrieved = recorder.TakeRetrieved().Select(r => r.Text)
+            .Concat(response.Messages.SelectMany(m => m.Contents).OfType<FunctionResultContent>().Select(r => $"{r.Result}"))
+            .ToList();
 
         await using var run = await reporting.CreateScenarioRunAsync($"{agentName}.{question.Id}", cancellationToken: ct);
         var result = await run.EvaluateAsync(
@@ -89,7 +92,7 @@ public sealed partial class AnswerEvalRunner(
             additionalContext:
             [
                 // Without retrieval there is nothing to be grounded in, which is exactly what the score should show.
-                new GroundednessEvaluatorContext(retrieved.Count == 0 ? "(nothing was retrieved)" : string.Join("\n\n", retrieved.Select(r => r.Text))),
+                new GroundednessEvaluatorContext(retrieved.Count == 0 ? "(nothing was retrieved)" : string.Join("\n\n", retrieved)),
                 new CompletenessEvaluatorContext(question.ReferenceAnswer),
             ],
             cancellationToken: ct);

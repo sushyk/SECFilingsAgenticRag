@@ -48,22 +48,34 @@ builder.AddAzureFunctionsProject<Projects.SECFilingsAgenticRag_IngestionPipeline
     .WithHttpCommand("/api/index", "Force re-index all filings", commandName: "reindex-force",
         commandOptions: ReindexOptions(force: true, "Re-embed every filing", "Re-embed every filing? This takes several minutes on CPU."));
 
-// Waits only for the database: search returns no hits until indexing has run. Host port 5180 comes from launchSettings.json,
-// so clients can rely on it.
-builder.AddProject<Projects.SECFilingsAgenticRag_AgentServer>("api")
+// agentic-rag's tools, and the MCP endpoint for external hosts (VS Code, Claude Desktop, Inspector) on the fixed port 5190 from
+// launchSettings.json. It gets the chat model too: multi-query and rerank, when configured, call it from inside a search.
+var mcp = builder.AddProject<Projects.SECFilingsAgenticRag_McpServer>("mcp")
     .WithReference(db).WaitFor(db)
     .WithReference(ollama)
     .WithAIModels(chatModel, embeddingModel)
     .WithExternalHttpEndpoints();
 
+// Waits only for the database: search returns no hits until indexing has run. Host port 5180 comes from launchSettings.json,
+// so clients can rely on it. No WaitFor(mcp): agentic-rag connects on its first run, and a missing mcp only costs it its tools.
+builder.AddProject<Projects.SECFilingsAgenticRag_AgentServer>("api")
+    .WithReference(db).WaitFor(db)
+    .WithReference(ollama)
+    .WithReference(mcp)
+    .WithAIModels(chatModel, embeddingModel)
+    .WithExternalHttpEndpoints();
+
 // Explicit start: an eval run takes minutes to hours on CPU, so it runs only when asked (aspire resource evals-retrieval start).
-foreach (var (name, command) in new[] { ("evals-retrieval", "retrieval"), ("evals-answers", "answers") })
-    builder.AddProject<Projects.SECFilingsAgenticRag_Evals>(name)
-        .WithArgs(command)
-        .WithReference(db).WaitFor(db)
-        .WithReference(ollama)
-        .WithAIModels(chatModel, embeddingModel)
-        .WithExplicitStart();
+IResourceBuilder<ProjectResource> Evals(string name, string command) => builder.AddProject<Projects.SECFilingsAgenticRag_Evals>(name)
+    .WithArgs(command)
+    .WithReference(db).WaitFor(db)
+    .WithReference(ollama)
+    .WithAIModels(chatModel, embeddingModel)
+    .WithExplicitStart();
+Evals("evals-retrieval", "retrieval");
+// It runs agentic-rag in-process, whose tool calls go to mcp at the fixed port (Mcp:Endpoint in the evals' appsettings.json;
+// the evals host has no service discovery).
+Evals("evals-answers", "answers").WaitFor(mcp);
 
 builder.Build().Run();
 

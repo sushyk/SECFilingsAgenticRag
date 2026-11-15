@@ -6,6 +6,8 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.VectorData;
 using Microsoft.ML.Tokenizers;
+using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
 using SECFilingsAgenticRag.AgentServer.Sessions;
 using SECFilingsAgenticRag.AgentServer.Tools;
 using SECFilingsAgenticRag.Common.AI;
@@ -17,7 +19,8 @@ namespace SECFilingsAgenticRag.AgentServer;
 
 public static class AgentHostingExtensions
 {
-    // Requires AddSecFilingsAI and AddSecFilingsRetrieval (and an NpgsqlDataSource for the Postgres store). Sessions are keyed by
+    // Requires AddSecFilingsAI and AddSecFilingsRetrieval (and an NpgsqlDataSource for the Postgres store), and Mcp:Endpoint for
+    // agentic-rag's tools. Sessions are keyed by
     // agent and AG-UI thread id; isolation is off because this is a single-user local demo. A shared deployment must keep it on
     // (authentication plus claims-based isolation), since a thread id is a resume identifier, not proof of ownership.
     public static IHostApplicationBuilder AddSecFilingsAgents(this IHostApplicationBuilder builder)
@@ -31,8 +34,15 @@ public static class AgentHostingExtensions
                 $"{AgentOptions.SectionName}:HardTokenBudget must be below AI:Chat:ContextLength, or the model has no room to answer.")
             .ValidateOnStart();
         builder.Services.AddOptions<GuardrailsOptions>().BindConfiguration(GuardrailsOptions.SectionName).ValidateOnStart();
-        builder.Services.AddMemoryCache();
-        builder.Services.AddSingleton<FilingTools>();
+        builder.Services.AddOptions<McpEndpointOptions>().BindConfiguration(McpEndpointOptions.SectionName).ValidateDataAnnotations().ValidateOnStart();
+        // ServiceDefaults' standard handler (10 s attempt, 3 retries) would cut a reranked search on CPU and then repeat it. The
+        // model's tool loop is the retry, so a tool call gets exactly one attempt, bounded by Mcp:TimeoutSeconds.
+        var mcp = builder.Services.AddHttpClient(McpToolsProvider.HttpClientName, (sp, client) =>
+            client.Timeout = TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<McpEndpointOptions>>().Value.TimeoutSeconds));
+#pragma warning disable EXTEXP0001 // experimental; Learn's documented way to replace the ServiceDefaults handler for one client
+        mcp.RemoveAllResilienceHandlers();
+#pragma warning restore EXTEXP0001
+        builder.Services.AddSingleton<McpToolsProvider>();
         builder.Services.AddSingleton<PostgresAgentSessionStore>();
 
         // Registration needs the choice before the container exists; the bound options validate the same value on start.
@@ -49,8 +59,9 @@ public static class AgentHostingExtensions
         Host(AgentNames.ChatOnly, (sp, name) => CreateAgent(sp, name, Chat(sp), new() { Instructions = Prompts.ChatOnly }));
         Host(AgentNames.StandardRag, (sp, name) =>
             CreateAgent(sp, name, Chat(sp), new() { Instructions = Prompts.StandardRag }, CreateFilingSearch(sp)));
+        // The tools come from the mcp resource, so every LLM tool call is an MCP tools/call.
         Host(AgentNames.AgenticRag, (sp, name) => CreateAgent(sp, name, WithToolLoop(sp, Chat(sp)),
-            new() { Instructions = Prompts.AgenticRag, Tools = sp.GetRequiredService<FilingTools>().AsTools() }));
+            new() { Instructions = Prompts.AgenticRag }, sp.GetRequiredService<McpToolsProvider>()));
 
         return builder;
     }
@@ -94,18 +105,25 @@ public static class AgentHostingExtensions
             invoker.MaximumIterationsPerRequest = sp.GetRequiredService<IOptions<AgentOptions>>().Value.MaxToolIterations;
             // Below the default of 3: on CPU every failed round trip costs tens of seconds.
             invoker.MaximumConsecutiveErrorsPerRequest = 2;
-            // Small models send optional arguments as the string "null" (measured), which fails binding. The generic
-            // "Function failed." made the model answer from memory; this message makes it retry. Other errors stay generic.
+            // McpClientTool returns a TextContent, or the whole CallToolResult as JSON when the server reports an error; both would
+            // reach the model and the AG-UI client JSON-serialized (measured: {"text":"Found 5 excerpts…"}), so the tool's own
+            // text is passed on. Argument errors are such results; an exception here means mcp is unreachable. Returned as a
+            // result it is not counted as a consecutive error, so the run ends with the model saying search is unavailable.
             invoker.FunctionInvoker = async (context, ct) =>
             {
                 try
                 {
-                    return await context.Function.InvokeAsync(context.Arguments, ct);
+                    return await context.Function.InvokeAsync(context.Arguments, ct) switch
+                    {
+                        TextContent text => text.Text,
+                        JsonElement error => string.Join("\n", error.Deserialize<CallToolResult>(McpJsonUtilities.DefaultOptions)!
+                            .Content.OfType<TextContentBlock>().Select(block => block.Text)),
+                        var other => other,
+                    };
                 }
-                catch (JsonException)
+                catch (Exception) when (!ct.IsCancellationRequested)
                 {
-                    return "Error: the arguments do not match the tool schema. Send numbers as JSON numbers and omit optional " +
-                           "parameters you have no value for; never send the string \"null\".";
+                    return McpToolsProvider.Unavailable;
                 }
             };
         });

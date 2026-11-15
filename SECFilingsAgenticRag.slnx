@@ -19,6 +19,7 @@
     <Project Path="src/SECFilingsAgenticRag.IngestionInit/SECFilingsAgenticRag.IngestionInit.csproj" />
     <Project Path="src/SECFilingsAgenticRag.IngestionPipeline/SECFilingsAgenticRag.IngestionPipeline.csproj" />
     <Project Path="src/SECFilingsAgenticRag.IngestionPipeline.Functions/SECFilingsAgenticRag.IngestionPipeline.Functions.csproj" />
+    <Project Path="src/SECFilingsAgenticRag.McpServer/SECFilingsAgenticRag.McpServer.csproj" />
     <Project Path="src/SECFilingsAgenticRag.RetrievalPipeline/SECFilingsAgenticRag.RetrievalPipeline.csproj" />
     <Project Path="src/SECFilingsAgenticRag.ServiceDefaults/SECFilingsAgenticRag.ServiceDefaults.csproj" />
   </Folder>

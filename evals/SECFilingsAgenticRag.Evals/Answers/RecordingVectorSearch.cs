@@ -6,7 +6,7 @@ using SECFilingsAgenticRag.Common.VectorStore;
 namespace SECFilingsAgenticRag.Evals.Answers;
 
 // Custom, evals only (no built-in fits): nothing built in captures what was retrieved. Groundedness must be judged against
-// what the agent actually saw, whether a context provider (standard-rag) or a tool (agentic-rag) searched.
+// what the agent actually saw; this captures standard-rag's context-provider searches (agentic-rag's run in the mcp process).
 public sealed class RecordingVectorSearch(IVectorSearchable<FilingChunkRecord> inner) : IVectorSearchable<FilingChunkRecord>
 {
     private readonly ConcurrentQueue<FilingChunkRecord> retrieved = new();
