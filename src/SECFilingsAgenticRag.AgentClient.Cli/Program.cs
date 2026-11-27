@@ -77,20 +77,45 @@ async Task<int> RunAsync(string question, CancellationToken ct)
     Console.Write("assistant> ");
     try
     {
+        var thinking = false;
         await foreach (var update in client.GetStreamingResponseAsync([message], options, ct))
         {
-            // update.Text holds only TextContent, so a reasoning model's thinking (TextReasoningContent) is never printed.
-            Console.Write(update.Text);
             foreach (var content in update.Contents)
             {
-                if (content is FunctionCallContent call)
+                switch (content)
                 {
-                    toolCalls++;
-                    Console.WriteLine($"\n🔎 {call.Name}({(showToolArgs ? JsonSerializer.Serialize(call.Arguments) : "...")})");
+                    // A reasoning model thinks for minutes on CPU before it answers; streaming the thinking shows the run is alive.
+                    // Not in --ask mode, whose output is the answer contract that scripts parse.
+                    case TextReasoningContent reasoning when ask is null:
+                        if (!thinking)
+                            Console.ForegroundColor = ConsoleColor.DarkGray;
+                        thinking = true;
+                        Console.Write(reasoning.Text);
+                        break;
+                    case TextContent text:
+                        EndThinking();
+                        Console.Write(text.Text);
+                        break;
+                    case FunctionCallContent call:
+                        EndThinking();
+                        toolCalls++;
+                        Console.WriteLine($"\n🔎 {call.Name}({(showToolArgs ? JsonSerializer.Serialize(call.Arguments) : "...")})");
+                        break;
+                    case FunctionResultContent result:
+                        Console.WriteLine($"  ↳ {Summarize(result.Result)}");
+                        break;
                 }
-                else if (content is FunctionResultContent result)
-                    Console.WriteLine($"  ↳ {Summarize(result.Result)}");
             }
+        }
+        EndThinking();
+
+        void EndThinking()
+        {
+            if (!thinking)
+                return;
+            thinking = false;
+            Console.ResetColor();
+            Console.WriteLine();
         }
     }
     catch (HttpRequestException e) when (e.StatusCode is null)
