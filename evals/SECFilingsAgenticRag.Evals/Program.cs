@@ -49,7 +49,7 @@ builder.Services.AddKeyedChatClient(JudgeOptions.ServiceKey,
 // The evals app is a host, so it owns the connection (libraries never open one).
 builder.Services.AddSingleton(_ =>
 {
-    var dataSource = new NpgsqlDataSourceBuilder(builder.Configuration.GetConnectionString("secfilings")
+    var dataSource = new NpgsqlDataSourceBuilder(builder.Configuration.GetConnectionString("secfilings-vector-db")
         ?? throw new InvalidOperationException("ConnectionStrings:secfilings is not configured (user-secrets, or run under Aspire)."));
     dataSource.UseVector();
     return dataSource.Build();

@@ -10,12 +10,12 @@ var postgres = builder.AddPostgres("postgres")
     .WithImageTag("pg17")
     .WithDataVolume()
     .WithLifetime(ContainerLifetime.Persistent);
-var db = postgres.AddDatabase("secfilings");
+var db = postgres.AddDatabase("secfilings-vector-db", databaseName: "secfilings");
 
 // Fixed blob port so CLI checks can use the well-known devstoreaccount1 connection string.
 var storage = builder.AddAzureStorage("storage")
     .RunAsEmulator(emulator => emulator.WithDataVolume().WithBlobPort(10000));
-var filings = storage.AddBlobContainer("filings");
+var filings = storage.AddBlobContainer("filings-blob-container", blobContainerName: "filings");
 
 // Ollama runs natively, not as a container; the endpoint comes from ConnectionStrings:ollama.
 var ollama = builder.AddConnectionString("ollama");
@@ -30,7 +30,7 @@ var secUserAgent = builder.AddParameter("sec-user-agent");
 var dataPath = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "..", "data", "filings"));
 
 // A run-to-completion job: nothing waits on it, indexing is requested by the user.
-builder.AddDotnetProject("ingestion-init", "../SECFilingsAgenticRag.IngestionInit/SECFilingsAgenticRag.IngestionInit.csproj")
+builder.AddDotnetProject("ingestion-init-job", "../SECFilingsAgenticRag.IngestionInit/SECFilingsAgenticRag.IngestionInit.csproj")
     .WithReference(filings)
     .WaitFor(filings)
     .WithEnvironment("IngestionInit__DataPath", dataPath)
@@ -38,7 +38,7 @@ builder.AddDotnetProject("ingestion-init", "../SECFilingsAgenticRag.IngestionIni
 
 // Nothing indexes automatically: the user requests it with scripts/Invoke-Indexing.ps1 or these commands. HttpClientName is left
 // unset, so the command's HttpClient has an infinite timeout and a long forced run still returns its report.
-builder.AddAzureFunctionsProject<Projects.SECFilingsAgenticRag_IngestionPipeline_Functions>("indexing")
+builder.AddAzureFunctionsProject<Projects.SECFilingsAgenticRag_IngestionPipeline_Functions>("ingestion-pipeline")
     .WithHostStorage(storage)
     .WithReference(db).WaitFor(db)
     .WithReference(filings).WaitFor(filings)
@@ -51,15 +51,15 @@ builder.AddAzureFunctionsProject<Projects.SECFilingsAgenticRag_IngestionPipeline
 
 // agentic-rag's tools, and the MCP endpoint for external hosts (VS Code, Claude Desktop, Inspector) on the fixed port 5190 from
 // launchSettings.json. It gets the chat model too: multi-query and rerank, when configured, call it from inside a search.
-var mcp = builder.AddDotnetProject("mcp", "../SECFilingsAgenticRag.McpServer/SECFilingsAgenticRag.McpServer.csproj")
+var mcp = builder.AddDotnetProject("filings-mcp-server", "../SECFilingsAgenticRag.McpServer/SECFilingsAgenticRag.McpServer.csproj")
     .WithReference(db).WaitFor(db)
     .WithReference(ollama)
     .WithAIModels(chatModel, embeddingModel)
     .WithExternalHttpEndpoints();
 
 // Waits only for the database: search returns no hits until indexing has run. Host port 5180 comes from launchSettings.json,
-// so clients can rely on it. No WaitFor(mcp): agentic-rag connects on its first run, and a missing mcp only costs it its tools.
-builder.AddDotnetProject("api", "../SECFilingsAgenticRag.AgentServer/SECFilingsAgenticRag.AgentServer.csproj")
+// so clients can rely on it. No WaitFor(mcp): agentic-rag connects on its first run, and a missing MCP server only costs it its tools.
+builder.AddDotnetProject("agent-server-web-api", "../SECFilingsAgenticRag.AgentServer/SECFilingsAgenticRag.AgentServer.csproj")
     .WithReference(db).WaitFor(db)
     .WithReference(ollama)
     .WithReference(mcp)

@@ -39,12 +39,12 @@ flowchart LR
         FS[("data/filings/<br/>*.htm + *.metadata.json")]
         CLI["SECFilingsAgenticRag.AgentClient.Cli<br/>(AGUIChatClient REPL)"]
         EXT["external MCP hosts<br/>(VS Code Copilot, Claude Desktop, Inspector)"]
-        YOU["you: scripts/Invoke-Indexing.ps1<br/>or aspire resource indexing reindex"]
+        YOU["you: scripts/Invoke-Indexing.ps1<br/>or aspire resource ingestion-pipeline reindex"]
     end
 
     subgraph Aspire["Aspire AppHost (aspire run)"]
         SEED["ingestion-init<br/>(init job: download + upload, then exit)"]
-        FUNC["indexing<br/>(Azure Function, HTTP)"]
+        FUNC["indexing-functions<br/>(Azure Function, HTTP)"]
         API["api<br/>(ASP.NET Core: MAF hosting + AG-UI)"]
         MCP["mcp<br/>(ASP.NET Core: MCP server, Phase 8)<br/>tools · resources · prompts"]
         AZ[("storage → filings<br/>Azurite blob container")]
@@ -78,7 +78,7 @@ sequenceDiagram
     participant PG as postgres
     participant AZ as storage (Azurite)
     participant I as ingestion-init (init job)
-    participant F as indexing (Function)
+    participant F as indexing-functions (Function)
     participant M as mcp (Phase 8)
     participant A as api
     actor U as you
@@ -100,7 +100,7 @@ sequenceDiagram
 **IngestionInit is an *init job*** (the Kubernetes *init container* pattern). It runs once to completion and stages the source documents, and only then is indexing requested.
 - It is **not a sidecar**: it doesn't keep running next to another service.
 - It is **not a "seeder"**: it was renamed from `Seeder`, because seeding implies loading database test data, while this job *acquires and stages source documents*. Microsoft's RAG guide describes this step as "documents are pushed or pulled into a data pipeline".
-- It **never calls the indexing Function.** The user requests indexing, so the expensive step is explicit, observable and repeatable. `aspire wait ingestion-init --status down` tells you the documents are in place.
+- It **never calls the indexing Function.** The user requests indexing, so the expensive step is explicit, observable and repeatable. `aspire wait ingestion-init-job --status down` tells you the documents are in place.
 
 ---
 
@@ -177,15 +177,15 @@ flowchart TD
 | Resource | Kind | Name | Notes |
 |---|---|---|---|
 | Postgres server | container `pgvector/pgvector:pg17` | `postgres` | data volume, so data survives restarts |
-| Database | Postgres DB | `secfilings` | connection string name used by clients |
+| Database | Postgres DB | `secfilings-vector-db` | connection string name used by clients; the physical database stays `secfilings` (`databaseName`) |
 | Storage account | Azure Storage, `RunAsEmulator()` (Azurite) | `storage` | data volume; also Functions host storage |
-| Blob container | blob container | `filings` | holds raw filings |
+| Blob container | blob container | `filings-blob-container` | holds raw filings; the physical container stays `filings` (`blobContainerName`) |
 | Ollama | external connection string | `ollama` | value `Endpoint=http://localhost:11434` in AppHost `appsettings.json` → `ConnectionStrings:ollama` |
-| Ingestion pipeline Function (`IngestionPipeline.Functions`) | `AddAzureFunctionsProject` | `indexing` | exposes `POST /api/index` |
-| IngestionInit (init job) | project, runs once to completion | `ingestion-init` | downloads + uploads, then exits. Nothing waits on it; `aspire wait ingestion-init --status down --timeout 3600` |
-| AgentServer | project | `api` | AG-UI agents and `/api/*`; fixed host port **5180** (http), set via `launchSettings.json` `applicationUrl`, so AgentClient.Cli can find it. `WaitFor(db)` only, so search is empty until indexing has run. From Phase 8 it has `WithReference(mcp)`: `agentic-rag` calls its tools over MCP |
-| McpServer (Phase 8) | project, `WithExternalHttpEndpoints` | `mcp` | MCP server at `/mcp` (stateless Streamable HTTP): tools, resources, prompts; fixed host port **5190**, so external MCP hosts can find it. `WaitFor(db)`, `WithReference(ollama)`, `WithAIModels` |
-| Re-index commands | `WithHttpCommand` on `indexing` | `reindex`, `reindex-force` | explicit `commandName` values (pinned). Run them with `aspire resource indexing reindex` |
+| Ingestion pipeline Function (`IngestionPipeline.Functions`) | `AddAzureFunctionsProject` | `ingestion-pipeline` | exposes `POST /api/index` |
+| IngestionInit (init job) | project, runs once to completion | `ingestion-init-job` | downloads + uploads, then exits. Nothing waits on it; `aspire wait ingestion-init-job --status down --timeout 3600` |
+| AgentServer | project | `agent-server-web-api` | AG-UI agents and `/api/*`; fixed host port **5180** (http), set via `launchSettings.json` `applicationUrl`, so AgentClient.Cli can find it. `WaitFor(db)` only, so search is empty until indexing has run. From Phase 8 it has `WithReference(mcpServer)` (`filings-mcp-server`): `agentic-rag` calls its tools over MCP |
+| McpServer (Phase 8) | project, `WithExternalHttpEndpoints` | `filings-mcp-server` | MCP server at `/mcp` (stateless Streamable HTTP): tools, resources, prompts; fixed host port **5190**, so external MCP hosts can find it. `WaitFor(db)`, `WithReference(ollama)`, `WithAIModels` |
+| Re-index commands | `WithHttpCommand` on `ingestion-pipeline` | `reindex`, `reindex-force` | explicit `commandName` values (pinned). Run them with `aspire resource ingestion-pipeline reindex` |
 | Evals (Phase 6) | projects, explicit start, `WithAIModels` | `evals-retrieval`, `evals-answers` | started on demand, not at AppHost boot |
 | Web UI (Phase 12) | JS app | `web` | React + Vite |
 
@@ -279,7 +279,7 @@ Configuration is read through the options pattern (`IOptions<T>`) with `Validate
     "SessionStore": "InMemory"         // Phase 7: Postgres in AgentServer
   },
   "Mcp": {                             // Phase 8. In AgentServer (MCP client):
-    "Endpoint": "http://mcp/mcp",      //   service discovery resolves the host "mcp" (the MCP transport rejects https+http://); alone: http://localhost:5190/mcp
+    "Endpoint": "http://filings-mcp-server/mcp", // service discovery resolves the host "filings-mcp-server" (the MCP transport rejects https+http://); alone: http://localhost:5190/mcp
     "TimeoutSeconds": 120,             //   HttpClient.Timeout on the "mcp" client; resilience handlers removed (one attempt, no retries)
                                        // In McpServer:
     "MaxResourceTokens": 6000          //   cap on one item resource (protects the client's context window)
@@ -678,7 +678,7 @@ How the three agents differ (each is its own AG-UI endpoint):
 
 Phase 7 adds rate limiting (`RequireRateLimiting("chat")`), a request size limit (413) and request timeouts on `/agents/*`.
 
-**MCP server (`SECFilingsAgenticRag.McpServer`, resource `mcp`, port 5190, Phase 8).** One endpoint, `POST /mcp`: Streamable HTTP JSON-RPC, stateless, plus `/health` and `/alive`.
+**MCP server (`SECFilingsAgenticRag.McpServer`, resource `filings-mcp-server`, port 5190, Phase 8).** One endpoint, `POST /mcp`: Streamable HTTP JSON-RPC, stateless, plus `/health` and `/alive`.
 
 | Primitive | Name / URI | Content |
 |---|---|---|
@@ -731,7 +731,7 @@ The phase specs refine the skeleton above. Each item is defined in full in the s
 | 5 | <ul><li>`agentic-rag` at `/agents/agentic-rag`: `FilingTools` (`AIFunctionFactory`), one `UseFunctionInvocation` with `MaximumIterationsPerRequest`, `UseProvidedChatClientAsIs = true`</li><li>deterministic cite tags `{Ticker}-FY{Year}-{SectionShort}`</li><li>`FilingSummary`, `ListFilingsAsync` (`GROUP BY` SQL, `IMemoryCache`); model-generated ticker filters validated against the index</li><li>`GET /api/filings`</li><li>AppHost parameters `chat-provider`, `chat-endpoint`, `chat-api-key`</li></ul> |
 | 6 | <ul><li>`PostgresHybridSearch` (`IVectorSearchable` + `IKeywordHybridSearchable`), `RrfFusion`</li><li>`RerankingVectorSearch`, `MultiQueryVectorSearch` decorators (MEAI `GetResponseAsync<T>`, `useJsonSchemaResponseFormat: false` fallback; optional `UseDistributedCache`)</li><li>`FilingChunkRecord.Text` marked `IsFullTextIndexed`: the connector's `EnsureCollectionExistsAsync` creates the GIN index over `to_tsvector('english', content)`</li><li>config keys `Retrieval:Rerank:Model`, `Retrieval:MultiQuery:Model` (optional; fall back to `AI:Chat`)</li><li>Evals: `Evals:{DatasetPath, ResultsPath, Judge:{…}}`, `JudgeOptions`, `RecordingVectorSearch`, golden `expectedToolCalls`, MAF `agent.EvaluateAsync` + `LocalEvaluator(EvalChecks…)` for tool use, MEAI.Evaluation + built-in response cache for answer quality, `tests/SECFilingsAgenticRag.Evals.Tests`</li><li>possibly a Common `ChatClientFactory` (prefer `AddKeyedChatClient`)</li></ul> |
 | 7 | <ul><li>`PostgresAgentSessionStore : AgentSessionStore` (table `agent_sessions`, keyed `(agent_id, conversation_id)`); `Agent:SessionStore`</li><li>guardrails as **MAF agent-run middleware**: token limit (`Agent:MaxInputTokens`, `Tokenizer.CountTokens`), topic guard (`GetResponseAsync<TopicDecision>`), citation note; `Guardrails:{TopicGuard, RequireCitations}`</li><li>built-in compaction (`CompactionProvider` + `ToolResult`/`SlidingWindow`/`Truncation` strategies on the `ChatClientBuilder`); `Agent:{CompactAboveTokens, MaxHistoryTurns, HardTokenBudget}`</li><li>`Telemetry:EnableSensitiveData` (off everywhere); `TelemetryNames` (`SECFilingsAgenticRag.AI`, `.AgentServer`, `.IngestionPipeline`, `.RetrievalPipeline`) registered exactly with `AddSource`/`AddMeter`; chat-client **and** agent `UseOpenTelemetry`; custom metrics `secfilings.*`</li><li>rate limiting, request size limit (413) and timeouts on `/agents/*`: `RateLimiting:Chat`, `Api:{ChatTimeoutSeconds, MaxRequestBytes}`</li><li>`OllamaHealthCheck`; named HttpClient `"ollama"`</li><li>`tests/SECFilingsAgenticRag.IntegrationTests` (AG-UI via `AGUIChatClient`)</li></ul> |
-| 8 | <ul><li>`PdfFilingReader` (`application/pdf`)</li><li>Phase 8: **`SECFilingsAgenticRag.McpServer`** (resource `mcp`, port 5190): `AddMcpServer().WithHttpTransport(Stateless)` + `MapMcp("/mcp")`; tools = `McpServerTool.Create` over `FilingTools.AsTools()`; `FilingResources` (`[McpServerResourceType]`) and `FilingPrompts` (`[McpServerPromptType]`); `Mcp:MaxResourceTokens`</li><li>Phase 8: `FilingTools`/`FilingSummary` moved to `RetrievalPipeline.Tools`, the escaping helpers moved to `ToolText`; `agentic-rag` gets its tools through `McpToolsProvider` (`McpClient` over the named HttpClient `"mcp"`, `Mcp:Endpoint`, `Mcp:TimeoutSeconds`); AgentServer no longer hosts `/mcp`</li><li>Phase 11: `SecCompanyFactsClient` in **McpServer**; every tool is an `AITool` singleton there, served as an MCP tool, and `agentic-rag` discovers it through `tools/list`</li><li>`ui/secfilings-web` (resource `web`, AG-UI client)</li><li>Phase 14: MEDI `KeywordEnricher`/`SummaryEnricher` + `QuestionsEnricher` (`GetResponseAsync<T>`), `UseDistributedCache` on the keyed `"enrichment"` client</li><li>queue `indexing-requests` plus `indexing_jobs` table</li></ul> |
+| 8 | <ul><li>`PdfFilingReader` (`application/pdf`)</li><li>Phase 8: **`SECFilingsAgenticRag.McpServer`** (resource `filings-mcp-server`, port 5190): `AddMcpServer().WithHttpTransport(Stateless)` + `MapMcp("/mcp")`; tools = `McpServerTool.Create` over `FilingTools.AsTools()`; `FilingResources` (`[McpServerResourceType]`) and `FilingPrompts` (`[McpServerPromptType]`); `Mcp:MaxResourceTokens`</li><li>Phase 8: `FilingTools`/`FilingSummary` moved to `RetrievalPipeline.Tools`, the escaping helpers moved to `ToolText`; `agentic-rag` gets its tools through `McpToolsProvider` (`McpClient` over the named HttpClient `"mcp"`, `Mcp:Endpoint`, `Mcp:TimeoutSeconds`); AgentServer no longer hosts `/mcp`</li><li>Phase 11: `SecCompanyFactsClient` in **McpServer**; every tool is an `AITool` singleton there, served as an MCP tool, and `agentic-rag` discovers it through `tools/list`</li><li>`ui/secfilings-web` (resource `web`, AG-UI client)</li><li>Phase 14: MEDI `KeywordEnricher`/`SummaryEnricher` + `QuestionsEnricher` (`GetResponseAsync<T>`), `UseDistributedCache` on the keyed `"enrichment"` client</li><li>queue `indexing-requests` plus `indexing_jobs` table</li></ul> |
 
 ### 5.8 Custom types and why no built-in fits
 
@@ -860,7 +860,7 @@ These are the problems most likely to waste an afternoon. Specs repeat the relev
        - `CircuitBreaker.SamplingDuration ≥ 2 × AttemptTimeout`, or options validation throws.
      - Indexing runs can take 10+ minutes: `scripts/Invoke-Indexing.ps1` uses `-TimeoutSec 3600`.
      - IngestionInit's EDGAR client removes the standard resilience handler: its own throttling handler owns retries, so the SEC rate limit isn't exceeded.
-     - Aspire dashboard / CLI HTTP commands use about a 100 s timeout. Watch long re-index runs with `aspire logs indexing`.
+     - Aspire dashboard / CLI HTTP commands use about a 100 s timeout. Watch long re-index runs with `aspire logs ingestion-pipeline`.
      - Set the Functions `host.json` `functionTimeout` to `"01:00:00"`.
 4. **Azurite is not a folder mount.** Files reach blob storage only through the Blob SDK (the IngestionInit job's upload step).
 5. **SEC EDGAR etiquette.** Every request needs a `User-Agent: <name> <email>` header, or you get HTTP 403. Stay under 10 requests per second.
@@ -907,7 +907,7 @@ These are the problems most likely to waste an afternoon. Specs repeat the relev
 |---|---|---|
 | Unit | xUnit, fakes for `IChatClient` / `IEmbeddingGenerator` / `IVectorSearchable<FilingChunkRecord>` | blob-metadata round-trip, collection naming, HTML cleanup and heading promotion, search composition by config, RRF math, guardrail middleware, AG-UI round trip (`WebApplicationFactory` + `AGUIChatClient`), MCP tools/resources/prompts through an MCP client over an in-memory `WebApplicationFactory` server (Phase 8) |
 | Integration | xUnit + Testcontainers (`pgvector/pgvector:pg17`, Azurite) | `VectorStoreWriter` schema contract (`WriterSchemaContractTests`: writer columns round-trip through `FilingChunkSchema`), incremental re-write and skip semantics; vector search with filters; indexing service run from a **plain generic host**, which proves the library is host-agnostic |
-| End-to-end | `Aspire.Hosting.Testing` | AppHost boots, `ingestion-init` completes, the test POSTs `/api/index` itself, then `/api/search` returns AAPL chunks |
+| End-to-end | `Aspire.Hosting.Testing` | AppHost boots, `ingestion-init-job` completes, the test POSTs `/api/index` itself, then `/api/search` returns AAPL chunks |
 | Quality | `SECFilingsAgenticRag.Evals` + `Microsoft.Extensions.AI.Evaluation` + MAF evaluation | Hit@k, MRR and Recall@k per retrieval strategy (custom); Relevance / Groundedness / Completeness per agent (MEAI.Evaluation); tool-use correctness for `agentic-rag` (`agent.EvaluateAsync` + `EvalChecks`) |
 
 Test categories (`[Trait("Category", "<name>")]`), so slow or infrastructure-bound tests can be filtered out:
@@ -942,4 +942,4 @@ Default run: `dotnet test --filter "Category!=RequiresOllama"`.
 | 15 | **Built-in first.** Use MEAI, MEVD, MEDI, Microsoft.ML.Tokenizers, MAF and Aspire / ASP.NET Core abstractions directly. A custom type needs a "why no built-in" comment and a row in §5.8 | Less code to write, test and explain; the SDKs evolve the plumbing for us; interview answers point at documented Microsoft APIs. The pass deleted the embedder, retriever, catalog, agent factory/provider, chat service, SSE events, conversation store, recorder, reranker/rewriter interfaces, JSON helper, topic guard, validator, vector-store initializer, IngestionInit step framework and enrichment cache table (§5.8) | Hand-rolled abstractions "for testability" (the built-in interfaces are already fakeable) |
 | 16 | **AG-UI + MAF hosting instead of a custom SSE chat protocol.** Named agents (`chat-only`, `standard-rag`, `agentic-rag`) registered with `AddAIAgent` and mapped at `/agents/{name}` with `MapAGUI`; sessions via `AgentSessionStore` keyed by agent + `threadId` (Postgres in Phase 7); guardrails as agent-run middleware; AgentClient.Cli on `AGUIChatClient`; web UI on an AG-UI client (CopilotKit or `@ag-ui/client`) | AG-UI is a standard protocol with text, tool-call and run events; MAF hosting already does session load/save; clients exist for .NET and JS; the agent is chosen per request by URL instead of a restart-requiring mode switch | A custom `/api/chat` SSE event hierarchy, chat service, conversation store and hand-written SSE parsers (all duplicate the SDK); a config-selected single agent |
 | 17 | **Five layers, one project per role:** `Common` (shared abstractions) → `IngestionPipeline` / `RetrievalPipeline` (host-agnostic libraries) → `AgentServer` (ASP.NET Core host of the agents) → `AgentClient.Cli`; plus `IngestionInit`, `IngestionPipeline.Functions`, AppHost and ServiceDefaults. Agents and guardrails live in `AgentServer`, their only host. **Amended by #18:** the MCP server (Phase 8) is its own host, `McpServer`; the tool bodies (`FilingTools`) live in `RetrievalPipeline` because two hosts use them, and the company-facts client (Phase 11) lives in `McpServer` | Every project has a reason to exist: a different host, or a contract that two hosts share. Names say which part of the RAG system a project is, matching Microsoft's guide and the proposed `Microsoft.Extensions.DataRetrieval` symmetry. Tests and evals reference `AgentServer` directly, as `WebApplicationFactory` tests do, so a separate agent library buys nothing | Separate `Agent` library + `Api` host (one consumer, so the split is ceremony); a separate `Edgar` project (one consumer); a `RetrievalPipeline` class name (would collide with Microsoft's proposed type) |
-| 18 | **(Phase 8) A separate MCP server, and `agentic-rag` consumes its tools over MCP.** `SECFilingsAgenticRag.McpServer` (resource `mcp`, port 5190, stateless Streamable HTTP) serves the tools (`search_filings`, `list_available_filings`), three resources (catalog, filing outline, one Item's full text) and three prompts (`analyze_risk_factors`, `compare_companies`, `summarize_filing_item`). `agentic-rag` lists and calls the tools through `McpClient` (an `AIContextProvider` connects lazily); `standard-rag`, `/api/*` and the retrieval evals stay in-process (the answer evals run `agentic-rag`, so their tool calls go to `mcp` too) | This is the real MCP pattern: tools sit behind a protocol boundary and are discovered at run time, so a new tool needs no `AgentServer` change, and in-house and third-party agents share one definition. The hop costs milliseconds against seconds of LLM time. Resources and prompts follow MCP's control model: tools for the model, resources for the host application, prompts for the user | MCP as an endpoint inside AgentServer, used by external clients only (the first Phase 8 attempt: the agent never crossed MCP); AgentServer calling its own `/mcp` over loopback (a hop with no boundary); `HostedMcpServerTool` (needs a model provider that calls MCP, which Ollama doesn't) |
+| 18 | **(Phase 8) A separate MCP server, and `agentic-rag` consumes its tools over MCP.** `SECFilingsAgenticRag.McpServer` (resource `filings-mcp-server`, port 5190, stateless Streamable HTTP) serves the tools (`search_filings`, `list_available_filings`), three resources (catalog, filing outline, one Item's full text) and three prompts (`analyze_risk_factors`, `compare_companies`, `summarize_filing_item`). `agentic-rag` lists and calls the tools through `McpClient` (an `AIContextProvider` connects lazily); `standard-rag`, `/api/*` and the retrieval evals stay in-process (the answer evals run `agentic-rag`, so their tool calls go to `mcp` too) | This is the real MCP pattern: tools sit behind a protocol boundary and are discovered at run time, so a new tool needs no `AgentServer` change, and in-house and third-party agents share one definition. The hop costs milliseconds against seconds of LLM time. Resources and prompts follow MCP's control model: tools for the model, resources for the host application, prompts for the user | MCP as an endpoint inside AgentServer, used by external clients only (the first Phase 8 attempt: the agent never crossed MCP); AgentServer calling its own `/mcp` over loopback (a hop with no boundary); `HostedMcpServerTool` (needs a model provider that calls MCP, which Ollama doesn't) |

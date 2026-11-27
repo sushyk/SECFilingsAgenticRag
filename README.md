@@ -138,7 +138,7 @@ cd SECFilingsAgenticRag
 # 1. Once: SEC requires your name and email in the User-Agent. Stored as an AppHost user-secret.
 dotnet user-secrets set "Parameters:sec-user-agent" "Your Name you@example.com" --project src/SECFilingsAgenticRag.AppHost
 
-# 2. Start everything. The ingestion-init job downloads (first run only) and uploads filings, then exits.
+# 2. Start everything. The ingestion-init-job downloads (first run only) and uploads filings, then exits.
 aspire run          # interactive, opens the dashboard; Ctrl+C to stop
 
 # 3. In a second terminal, request indexing. Minutes the first time; seconds when nothing changed.
@@ -165,14 +165,14 @@ dotnet run --project src/SECFilingsAgenticRag.AgentClient.Cli -- --agent agentic
 **Start everything headlessly** (Docker Desktop and native Ollama running; the Aspire CLI must match the AppHost's 17.0.x):
 
 ```powershell
-aspire start; aspire wait ingestion-init --status down --timeout 3600; aspire wait indexing
+aspire start; aspire wait ingestion-init-job --status down --timeout 3600; aspire wait ingestion-pipeline
 ./scripts/Invoke-Indexing.ps1
-aspire wait api
+aspire wait agent-server-web-api
 dotnet run --project src/SECFilingsAgenticRag.AgentClient.Cli -- --agent agentic-rag --ask "What are NVIDIA's main risk factors?"
 aspire stop
 ```
 
-**Where telemetry lives.** Everything goes to the Aspire dashboard (the `aspire start` output prints its URL): **Traces**, **Metrics**, **Structured logs**. From a terminal: `aspire otel traces api`, `aspire otel spans api --trace-id <id> --format Json`, `aspire otel logs api`.
+**Where telemetry lives.** Everything goes to the Aspire dashboard (the `aspire start` output prints its URL): **Traces**, **Metrics**, **Structured logs**. From a terminal: `aspire otel traces agent-server-web-api`, `aspire otel spans agent-server-web-api --trace-id <id> --format Json`, `aspire otel logs agent-server-web-api`.
 
 **Debugging a slow or bad answer.** Find the `POST /agents/<agent>` trace with the longest duration. One trace holds the whole run:
 
