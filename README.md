@@ -1,5 +1,6 @@
 # SEC Filings Agentic RAG
 
+[![M8ven Score](https://m8ven.ai/badge/mcp/sushyk-secfilingsagenticrag-ko0br3?v=7dff96ec0c38e77c344d62869ee46333)](https://m8ven.ai/mcp/sushyk-secfilingsagenticrag-ko0br3?s=readme)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Aspire 13](https://img.shields.io/badge/Aspire-13.6-512BD4)](https://aspire.dev/)
 [![Microsoft Agent Framework](https://img.shields.io/badge/Microsoft-Agent%20Framework-0078D4)](https://learn.microsoft.com/agent-framework/)
