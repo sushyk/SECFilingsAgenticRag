@@ -14,3 +14,7 @@ Code must be:
 
 - Write commit messages in the Conventional Commits format: `<type>(<optional scope>): <description>`
 - Use the standard types: `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`. Mark breaking changes with `!` after the type/scope or a `BREAKING CHANGE:` footer.
+
+# Pull Requests
+
+- Every pull request description MUST follow [.github/pull_request_template.md](.github/pull_request_template.md). Read it before running `gh pr create` and fill every section; write "None" or "Not applicable" rather than deleting a section.
