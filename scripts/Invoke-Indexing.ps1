@@ -16,8 +16,8 @@ param(
 if (-not $BaseUrl) {
     # Parsed, not regex-matched: the description also carries the storage connection strings, whose Azurite URLs come first.
     try {
-        $resource = (aspire describe indexing --format json --non-interactive 2>$null | Out-String | ConvertFrom-Json).resources |
-            Where-Object displayName -eq 'indexing'
+        $resource = (aspire describe ingestion-pipeline --format json --non-interactive 2>$null | Out-String | ConvertFrom-Json).resources |
+            Where-Object displayName -eq 'ingestion-pipeline'
         $BaseUrl = ($resource.urls | Where-Object name -eq 'http' | Select-Object -First 1).url
     }
     catch { }
@@ -41,7 +41,7 @@ catch {
         exit 2
     }
     # The Functions host proxy drops requests after about 5 minutes, but the run itself continues and finishes.
-    Write-Error "No report received ($($_.Exception.Message)). Indexing may still be running: watch 'aspire logs indexing', then re-run this script; finished filings report as skipped." -ErrorAction Continue
+    Write-Error "No report received ($($_.Exception.Message)). Indexing may still be running: watch 'aspire logs ingestion-pipeline', then re-run this script; finished filings report as skipped." -ErrorAction Continue
     exit 4
 }
 

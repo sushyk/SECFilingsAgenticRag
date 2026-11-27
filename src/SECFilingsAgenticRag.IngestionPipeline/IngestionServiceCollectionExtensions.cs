@@ -8,7 +8,7 @@ namespace SECFilingsAgenticRag.IngestionPipeline;
 
 public static class IngestionServiceCollectionExtensions
 {
-    // The host supplies BlobContainerClient ("filings") and NpgsqlDataSource, and calls AddSecFilingsAI and
+    // The host supplies BlobContainerClient ("filings-blob-container") and NpgsqlDataSource, and calls AddSecFilingsAI and
     // AddSecFilingsVectorStore(EmbeddingModelConstants.DocumentEmbeddingKey) before this.
     public static IServiceCollection AddSecFilingsIngestion(this IServiceCollection services, IConfiguration configuration)
     {

@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using Aspire.Hosting.Dotnet;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -9,12 +10,12 @@ var postgres = builder.AddPostgres("postgres")
     .WithImageTag("pg17")
     .WithDataVolume()
     .WithLifetime(ContainerLifetime.Persistent);
-var db = postgres.AddDatabase("secfilings");
+var db = postgres.AddDatabase("secfilings-vector-db", databaseName: "secfilings");
 
 // Fixed blob port so CLI checks can use the well-known devstoreaccount1 connection string.
 var storage = builder.AddAzureStorage("storage")
     .RunAsEmulator(emulator => emulator.WithDataVolume().WithBlobPort(10000));
-var filings = storage.AddBlobContainer("filings");
+var filings = storage.AddBlobContainer("filings-blob-container", blobContainerName: "filings");
 
 // Ollama runs natively, not as a container; the endpoint comes from ConnectionStrings:ollama.
 var ollama = builder.AddConnectionString("ollama");
@@ -23,13 +24,13 @@ var ollama = builder.AddConnectionString("ollama");
 var chatModel = builder.AddParameter("chat-model");
 var embeddingModel = builder.AddParameter("embedding-model");
 
-// The SEC requires "<Name> <email>" as User-Agent; it is personal data, so it lives in AppHost user-secrets.
-// A required parameter would keep ingestion-init from starting until someone fills it in; empty lets the job log the fix instead.
-var secUserAgent = builder.AddParameter("sec-user-agent", () => builder.Configuration["Parameters:sec-user-agent"] ?? "", secret: true);
+// The SEC requires "<Name> <email>" as User-Agent. It is not a secret, but it is personal, so it lives in AppHost user-secrets
+// rather than appsettings.json; until it is set, the dashboard prompts for it.
+var secUserAgent = builder.AddParameter("sec-user-agent");
 var dataPath = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "..", "data", "filings"));
 
 // A run-to-completion job: nothing waits on it, indexing is requested by the user.
-builder.AddProject<Projects.SECFilingsAgenticRag_IngestionInit>("ingestion-init")
+builder.AddDotnetProject("ingestion-init-job", "../SECFilingsAgenticRag.IngestionInit/SECFilingsAgenticRag.IngestionInit.csproj")
     .WithReference(filings)
     .WaitFor(filings)
     .WithEnvironment("IngestionInit__DataPath", dataPath)
@@ -37,7 +38,7 @@ builder.AddProject<Projects.SECFilingsAgenticRag_IngestionInit>("ingestion-init"
 
 // Nothing indexes automatically: the user requests it with scripts/Invoke-Indexing.ps1 or these commands. HttpClientName is left
 // unset, so the command's HttpClient has an infinite timeout and a long forced run still returns its report.
-builder.AddAzureFunctionsProject<Projects.SECFilingsAgenticRag_IngestionPipeline_Functions>("indexing")
+builder.AddAzureFunctionsProject<Projects.SECFilingsAgenticRag_IngestionPipeline_Functions>("ingestion-pipeline")
     .WithHostStorage(storage)
     .WithReference(db).WaitFor(db)
     .WithReference(filings).WaitFor(filings)
@@ -50,23 +51,30 @@ builder.AddAzureFunctionsProject<Projects.SECFilingsAgenticRag_IngestionPipeline
 
 // agentic-rag's tools, and the MCP endpoint for external hosts (VS Code, Claude Desktop, Inspector) on the fixed port 5190 from
 // launchSettings.json. It gets the chat model too: multi-query and rerank, when configured, call it from inside a search.
-var mcp = builder.AddProject<Projects.SECFilingsAgenticRag_McpServer>("mcp")
+var mcp = builder.AddDotnetProject("filings-mcp-server", "../SECFilingsAgenticRag.McpServer/SECFilingsAgenticRag.McpServer.csproj")
     .WithReference(db).WaitFor(db)
     .WithReference(ollama)
     .WithAIModels(chatModel, embeddingModel)
     .WithExternalHttpEndpoints();
 
 // Waits only for the database: search returns no hits until indexing has run. Host port 5180 comes from launchSettings.json,
-// so clients can rely on it. No WaitFor(mcp): agentic-rag connects on its first run, and a missing mcp only costs it its tools.
-builder.AddProject<Projects.SECFilingsAgenticRag_AgentServer>("api")
+// so clients can rely on it. No WaitFor(mcp): agentic-rag connects on its first run, and a missing MCP server only costs it its tools.
+var api = builder.AddDotnetProject("agent-server-web-api", "../SECFilingsAgenticRag.AgentServer/SECFilingsAgenticRag.AgentServer.csproj")
     .WithReference(db).WaitFor(db)
     .WithReference(ollama)
     .WithReference(mcp)
     .WithAIModels(chatModel, embeddingModel)
     .WithExternalHttpEndpoints();
 
+// An interactive REPL, so it runs in a terminal: the dashboard's Console logs page (Terminal view), or
+// `aspire terminal attach chat-client-cli`. It has no service discovery, so it gets the API's URL directly.
+builder.AddDotnetProject("chat-client-cli", "../SECFilingsAgenticRag.AgentClient.Cli/SECFilingsAgenticRag.AgentClient.Cli.csproj")
+    .WithEnvironment("SECFILINGS_API", api.GetEndpoint("http"))
+    .WaitFor(api)
+    .WithTerminal();
+
 // Explicit start: an eval run takes minutes to hours on CPU, so it runs only when asked (aspire resource evals-retrieval start).
-IResourceBuilder<ProjectResource> Evals(string name, string command) => builder.AddProject<Projects.SECFilingsAgenticRag_Evals>(name)
+IResourceBuilder<DotnetProjectResource> Evals(string name, string command) => builder.AddDotnetProject(name, "../../evals/SECFilingsAgenticRag.Evals/SECFilingsAgenticRag.Evals.csproj")
     .WithArgs(command)
     .WithReference(db).WaitFor(db)
     .WithReference(ollama)

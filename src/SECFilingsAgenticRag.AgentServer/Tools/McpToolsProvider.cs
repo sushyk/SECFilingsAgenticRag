@@ -9,7 +9,7 @@ public sealed class McpEndpointOptions
 {
     public const string SectionName = "Mcp";
 
-    // Under Aspire, service discovery resolves the host "mcp" in http://mcp/mcp; running AgentServer alone: http://localhost:5190/mcp.
+    // Under Aspire, service discovery resolves the host "filings-mcp-server" in http://filings-mcp-server/mcp; running AgentServer alone: http://localhost:5190/mcp.
     // Not https+http://: the MCP transport accepts only an http or https scheme.
     [Required]
     public Uri? Endpoint { get; set; }
@@ -20,7 +20,7 @@ public sealed class McpEndpointOptions
 }
 
 // Custom (no built-in fits): no built-in context provider supplies tools from an MCP server, and McpClient setup is async while
-// the AddAIAgent factory is not. Connecting on the first run, not at startup, keeps api starting while mcp is down.
+// the AddAIAgent factory is not. Connecting on the first run, not at startup, keeps the agent server starting while the MCP server is down.
 public sealed class McpToolsProvider(
     IHttpClientFactory httpClients, IOptions<McpEndpointOptions> options, ILoggerFactory loggerFactory, ILogger<McpToolsProvider> logger)
     : AIContextProvider, IAsyncDisposable

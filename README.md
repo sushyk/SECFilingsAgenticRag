@@ -2,7 +2,7 @@
 
 [![M8ven Score](https://m8ven.ai/badge/mcp/sushyk-secfilingsagenticrag-ko0br3?v=7dff96ec0c38e77c344d62869ee46333)](https://m8ven.ai/mcp/sushyk-secfilingsagenticrag-ko0br3?s=readme)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
-[![Aspire 13](https://img.shields.io/badge/Aspire-13.6-512BD4)](https://aspire.dev/)
+[![Aspire 17](https://img.shields.io/badge/Aspire-17.0-512BD4)](https://aspire.dev/)
 [![Microsoft Agent Framework](https://img.shields.io/badge/Microsoft-Agent%20Framework-0078D4)](https://learn.microsoft.com/agent-framework/)
 [![MCP](https://img.shields.io/badge/MCP-server-000000)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -138,14 +138,15 @@ cd SECFilingsAgenticRag
 # 1. Once: SEC requires your name and email in the User-Agent. Stored as an AppHost user-secret.
 dotnet user-secrets set "Parameters:sec-user-agent" "Your Name you@example.com" --project src/SECFilingsAgenticRag.AppHost
 
-# 2. Start everything. The ingestion-init job downloads (first run only) and uploads filings, then exits.
+# 2. Start everything. The ingestion-init-job downloads (first run only) and uploads filings, then exits.
 aspire run          # interactive, opens the dashboard; Ctrl+C to stop
 
 # 3. In a second terminal, request indexing. Minutes the first time; seconds when nothing changed.
 ./scripts/Invoke-Indexing.ps1
 
-# 4. Chat. Pick the agent per run: chat-only | standard-rag (default) | agentic-rag
-dotnet run --project src/SECFilingsAgenticRag.AgentClient.Cli -- --agent agentic-rag
+# 4. Chat: open chat-client-cli in the dashboard (Console logs → Terminal), or attach from a terminal.
+#    Switch agents in the chat with /agent chat-only (default) | standard-rag | agentic-rag
+aspire terminal attach chat-client-cli
 ```
 
 **Use the MCP server from VS Code.** While the app runs, the repo's [.vscode/mcp.json](.vscode/mcp.json) connects Copilot Chat to the MCP server's `search_filings` and `list_available_filings` tools.
@@ -156,23 +157,23 @@ dotnet run --project src/SECFilingsAgenticRag.AgentClient.Cli -- --agent agentic
 |---|---|---|
 | Chat model | AppHost `appsettings.json` → `Parameters:chat-model` | `${env:Parameters__chat-model} = "qwen3:8b"` |
 | Embedding model | AppHost `Parameters:embedding-model` (dimensions are fixed at 768 in code) | must produce 768 dimensions; drop `sec_filing_chunks` and re-index afterwards |
-| Agent | chosen per request by URL (`/agents/chat-only`, `/agents/standard-rag`, `/agents/agentic-rag`); AgentClient.Cli `--agent` | `--agent agentic-rag` |
+| Agent | chosen per request by URL (`/agents/chat-only`, `/agents/standard-rag`, `/agents/agentic-rag`); AgentClient.Cli `/agent <name>` in the chat, or `--agent` | `/agent agentic-rag` |
 | Retrieval strategy | AgentServer `appsettings.json` → `Retrieval:Strategy`, `Retrieval:Rerank:Enabled` | `$env:Retrieval__Strategy = "Hybrid"` |
 | Cloud chat (optional) | `chat-provider`, `chat-endpoint`, `chat-api-key` (secret) | set via `dotnet user-secrets` on the AppHost |
 
 ## Operating the system
 
-**Start everything headlessly** (Docker Desktop and native Ollama running; the Aspire CLI must match the AppHost's 13.6.x):
+**Start everything headlessly** (Docker Desktop and native Ollama running; the Aspire CLI must match the AppHost's 17.0.x):
 
 ```powershell
-aspire start; aspire wait ingestion-init --status down --timeout 3600; aspire wait indexing
+aspire start; aspire wait ingestion-init-job --status down --timeout 3600; aspire wait ingestion-pipeline
 ./scripts/Invoke-Indexing.ps1
-aspire wait api
+aspire wait agent-server-web-api
 dotnet run --project src/SECFilingsAgenticRag.AgentClient.Cli -- --agent agentic-rag --ask "What are NVIDIA's main risk factors?"
 aspire stop
 ```
 
-**Where telemetry lives.** Everything goes to the Aspire dashboard (the `aspire start` output prints its URL): **Traces**, **Metrics**, **Structured logs**. From a terminal: `aspire otel traces api`, `aspire otel spans api --trace-id <id> --format Json`, `aspire otel logs api`.
+**Where telemetry lives.** Everything goes to the Aspire dashboard (the `aspire start` output prints its URL): **Traces**, **Metrics**, **Structured logs**. From a terminal: `aspire otel traces agent-server-web-api`, `aspire otel spans agent-server-web-api --trace-id <id> --format Json`, `aspire otel logs agent-server-web-api`.
 
 **Debugging a slow or bad answer.** Find the `POST /agents/<agent>` trace with the longest duration. One trace holds the whole run:
 

@@ -3,13 +3,15 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Aspire: every Aspire.* version here AND the Aspire.AppHost.Sdk/<version> attribute in
-         src/SECFilings.AppHost/SECFilings.AppHost.csproj (not covered by CPM) MUST stay on ONE version. -->
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.6.4" />
-    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="13.6.4" />
-    <PackageVersion Include="Aspire.Azure.Storage.Blobs" Version="13.6.4" />
-    <PackageVersion Include="Aspire.Hosting.Azure.Functions" Version="13.6.4" />
-    <PackageVersion Include="Aspire.Npgsql" Version="13.6.4" />
+    <!-- Aspire: every Aspire.* version here AND sdk.version in src/SECFilingsAgenticRag.AppHost/aspire.config.json
+         (the CLI bundle version) MUST stay on ONE version. -->
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Dotnet" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Azure.Storage.Blobs" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Azure.Functions" Version="17.0.0" />
+    <PackageVersion Include="Aspire.Npgsql" Version="17.0.0" />
 
     <!-- ServiceDefaults -->
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />

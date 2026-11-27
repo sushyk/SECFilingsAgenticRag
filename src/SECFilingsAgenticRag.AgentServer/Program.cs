@@ -18,7 +18,7 @@ const string SearchPolicy = "search";
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
-builder.AddNpgsqlDataSource("secfilings", configureDataSourceBuilder: dataSource => dataSource.UseVector());
+builder.AddNpgsqlDataSource("secfilings-vector-db", configureDataSourceBuilder: dataSource => dataSource.UseVector());
 builder.Services.AddSecFilingsAI(builder.Configuration);
 builder.Services.AddSecFilingsVectorStore(EmbeddingModelConstants.QueryEmbeddingKey);
 builder.Services.AddSecFilingsRetrieval(builder.Configuration);

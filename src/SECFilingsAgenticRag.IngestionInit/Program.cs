@@ -8,7 +8,7 @@ using SECFilingsAgenticRag.IngestionInit.Edgar;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.AddServiceDefaults();
-builder.AddAzureBlobContainerClient("filings");
+builder.AddAzureBlobContainerClient("filings-blob-container");
 builder.Services.AddOptions<IngestionInitOptions>()
     .BindConfiguration(IngestionInitOptions.SectionName)
     .ValidateDataAnnotations()
