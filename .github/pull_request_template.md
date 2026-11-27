@@ -26,7 +26,7 @@
 
 ## Checklist
 
-- [ ] Code follows the rules in `CLAUDE.md` (simple, clean, clear, concise; comments explain why only)
+- [ ] Code follows the rules in `CLAUDE.md`
 - [ ] Docs, README and ADRs updated where behavior or decisions changed
 - [ ] No secrets, credentials or local paths committed
 - [ ] Commits use Conventional Commits
