@@ -2,7 +2,7 @@
 
 [![M8ven Score](https://m8ven.ai/badge/mcp/sushyk-secfilingsagenticrag-ko0br3?v=7dff96ec0c38e77c344d62869ee46333)](https://m8ven.ai/mcp/sushyk-secfilingsagenticrag-ko0br3?s=readme)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
-[![Aspire 13](https://img.shields.io/badge/Aspire-13.6-512BD4)](https://aspire.dev/)
+[![Aspire 17](https://img.shields.io/badge/Aspire-17.0-512BD4)](https://aspire.dev/)
 [![Microsoft Agent Framework](https://img.shields.io/badge/Microsoft-Agent%20Framework-0078D4)](https://learn.microsoft.com/agent-framework/)
 [![MCP](https://img.shields.io/badge/MCP-server-000000)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -162,7 +162,7 @@ dotnet run --project src/SECFilingsAgenticRag.AgentClient.Cli -- --agent agentic
 
 ## Operating the system
 
-**Start everything headlessly** (Docker Desktop and native Ollama running; the Aspire CLI must match the AppHost's 13.6.x):
+**Start everything headlessly** (Docker Desktop and native Ollama running; the Aspire CLI must match the AppHost's 17.0.x):
 
 ```powershell
 aspire start; aspire wait ingestion-init --status down --timeout 3600; aspire wait indexing

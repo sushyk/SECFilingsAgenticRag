@@ -216,7 +216,7 @@ Configuration is read through the options pattern (`IOptions<T>`) with `Validate
    | `chat-provider` | `AI__Chat__Provider` | 5 |
    | `chat-endpoint` | `AI__Chat__Endpoint` | 5 |
    | `chat-api-key` (secret) | `AI__Chat__ApiKey` | 5 |
-   | `sec-user-agent` (secret; AppHost user-secrets) | `IngestionInit__Edgar__UserAgent` | 1 |
+   | `sec-user-agent` (required; AppHost user-secrets) | `IngestionInit__Edgar__UserAgent` | 1 |
 
    Empty `Endpoint` / `ApiKey` values are treated as *unset* when `Provider=Ollama`.
 5. **Secrets** (`AI:Chat:ApiKey`) are never put in `appsettings.json`. Use `dotnet user-secrets` locally, or an environment variable or secret store after deployment.
@@ -287,7 +287,7 @@ Configuration is read through the options pattern (`IOptions<T>`) with `Validate
   "IngestionInit": {
     "DataPath": "<absolute path to data/filings, set by AppHost>",
     "Edgar": { "Enabled": true, "Tickers": ["AAPL","MSFT","NVDA","AMZN","TSLA"], "FormType": "10-K", "Count": 1,
-               "MaxRequestsPerSecond": 8, "UserAgent": "<injected from the sec-user-agent secret>" }
+               "MaxRequestsPerSecond": 8, "UserAgent": "<injected from the sec-user-agent parameter>" }
   }
 }
 ```
