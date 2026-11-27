@@ -125,7 +125,7 @@ SECFilingsAgent/
 │  ├─ SECFilingsAgenticRag.RetrievalPipeline/            # retrieval pipeline library (host-agnostic); Tools/: FilingTools (model-facing tool bodies, Phase 8 moved them here)
 │  ├─ SECFilingsAgenticRag.AgentServer/                  # ASP.NET Core: MAF agents (AddAIAgent), guardrail middleware, session store, MCP client for agentic-rag; AG-UI /agents/{name}, /api/search, /api/filings
 │  ├─ SECFilingsAgenticRag.McpServer/                    # Phase 8, ASP.NET Core MCP server at /mcp: tools (FilingTools), resources, prompts
-│  └─ SECFilingsAgenticRag.AgentClient.Cli/              # console AG-UI client (AGUIChatClient; runs outside Aspire)
+│  └─ SECFilingsAgenticRag.AgentClient.Cli/              # console AG-UI client (AGUIChatClient; an Aspire terminal resource)
 ├─ scripts/
 │  └─ Invoke-Indexing.ps1         # the user's way to request indexing (POST /api/index, prints the report)
 ├─ evals/
@@ -186,6 +186,7 @@ flowchart TD
 | AgentServer | project | `agent-server-web-api` | AG-UI agents and `/api/*`; fixed host port **5180** (http), set via `launchSettings.json` `applicationUrl`, so AgentClient.Cli can find it. `WaitFor(db)` only, so search is empty until indexing has run. From Phase 8 it has `WithReference(mcpServer)` (`filings-mcp-server`): `agentic-rag` calls its tools over MCP |
 | McpServer (Phase 8) | project, `WithExternalHttpEndpoints` | `filings-mcp-server` | MCP server at `/mcp` (stateless Streamable HTTP): tools, resources, prompts; fixed host port **5190**, so external MCP hosts can find it. `WaitFor(db)`, `WithReference(ollama)`, `WithAIModels` |
 | Re-index commands | `WithHttpCommand` on `ingestion-pipeline` | `reindex`, `reindex-force` | explicit `commandName` values (pinned). Run them with `aspire resource ingestion-pipeline reindex` |
+| AgentClient.Cli | project, `WithTerminal`, `WaitFor(api)` | `chat-client-cli` | interactive chat in the dashboard's Terminal view or `aspire terminal attach chat-client-cli`; gets the API URL as `SECFILINGS_API`; `/agent <name>` switches agent |
 | Evals (Phase 6) | projects, explicit start, `WithAIModels` | `evals-retrieval`, `evals-answers` | started on demand, not at AppHost boot |
 | Web UI (Phase 12) | JS app | `web` | React + Vite |
 
@@ -702,7 +703,8 @@ Built on the **built-in AG-UI client**: `new AGUIChatClient(...)`, which is an `
 | Flag | Meaning |
 |---|---|
 | `--api <url>` | API base URL, default `SECFILINGS_API` env var, then `http://localhost:5180` |
-| `--agent <name>` | `chat-only` \| `standard-rag` (default) \| `agentic-rag` → `/agents/<name>`; changing it starts a new thread |
+| `--agent <name>` | `chat-only` (default) \| `standard-rag` \| `agentic-rag` → `/agents/<name>`; changing it starts a new thread |
+| `/agent <name>` (in the chat) | switch agent mid-session, same names; starts a new thread |
 | `--ask "<question>"` | one-shot mode: send one question, print the streamed answer, exit (agent- and script-friendly) |
 | `--thread <id>` | continue an existing AG-UI thread |
 | `--show-tool-args` | print full tool-call arguments (Phase 5) |
@@ -867,7 +869,7 @@ These are the problems most likely to waste an afternoon. Specs repeat the relev
 6. **10-K HTML is messy (inline XBRL).** Remove the hidden `<ix:header>` block and `display:none` elements. "Item 1A. Risk Factors"-style headings are often bold `<span>`s, not `<h1>`s, so promote lines matching `^ITEM\s+\d+[A-C]?\s*[.:–—-]` (case-insensitive, after whitespace/nbsp normalization and merging split spans) to Markdown `##` headings, **except** inside the table of contents (table rows).
 7. **Npgsql and dates.** `timestamptz` columns need `DateTimeKind.Utc`.
 8. **pgvector extension.** The database needs `CREATE EXTENSION IF NOT EXISTS vector;` before the first collection is created. `PgVectorSetup.EnsureExtensionAsync` runs it from code (Aspire's creation script runs at server level, not inside the `secfilings` database).
-9. **Aspire gives console apps no stdin**, so `AgentClient.Cli` runs in its own terminal: `dotnet run --project src/SECFilingsAgenticRag.AgentClient.Cli`. That's why the API has a fixed port (5180).
+9. **Aspire gives console apps no stdin** unless they have a terminal, so `AgentClient.Cli` runs with `WithTerminal()`: use it from the dashboard's Terminal view or `aspire terminal attach chat-client-cli`. The API keeps its fixed port (5180) so the CLI also works standalone (`dotnet run --project src/SECFilingsAgenticRag.AgentClient.Cli`).
 10. **Small local models are imperfect tool callers.** Agentic tests must tolerate the model skipping a tool. The cloud switch (`AI:Chat:Provider=OpenAICompatible`) exists for demos.
 11. **Preview packages move.** `Microsoft.Extensions.DataIngestion` and `Microsoft.ML.Tokenizers.Data.Cl100kBase` are preview-only. `CommunityToolkit.VectorData.PgVector` is stable (1.0.x) but young. Verify API names with the Microsoft Learn MCP server (`microsoft_docs_search`, `microsoft_code_sample_search`) before coding against them.
 12. **Retrieved text is untrusted input.** It is passed to the model as *data* (clearly delimited by `Prompts.FormatSources` / the tool's `<excerpt>` format), never as instructions. Search queries are untrusted too, whether user-typed or LLM-generated (Learn's `TextSearchProvider` security remarks), so `FilingSearch` validates them and tools validate filter values against the index. Hardened in Phase 7.

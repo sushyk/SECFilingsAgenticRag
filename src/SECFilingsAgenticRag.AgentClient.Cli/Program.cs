@@ -7,21 +7,24 @@ using Microsoft.Extensions.AI;
 
 Console.OutputEncoding = Encoding.UTF8;
 
+// Mirrors AgentNames in AgentServer, which this client does not reference: it talks to the server only over AG-UI.
+string[] agents = ["chat-only", "standard-rag", "agentic-rag"];
+
 var api = Option("--api") ?? Environment.GetEnvironmentVariable("SECFILINGS_API") ?? "http://localhost:5180";
-var agent = Option("--agent") ?? "standard-rag";
+var agent = Option("--agent") ?? "chat-only";
 var thread = Option("--thread");
 var ask = Option("--ask");
 var showToolArgs = args.Contains("--show-tool-args");
 
 // Answers on CPU take minutes; the request CancellationToken bounds a run instead.
 using var http = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
-var endpoint = $"{api.TrimEnd('/')}/agents/{agent}";
+var endpoint = Endpoint();
 var client = new AGUIChatClient(new AGUIChatClientOptions(http, endpoint));
 
 if (ask is not null)
     return await RunAsync(ask, CancellationToken.None);
 
-Console.WriteLine($"SEC Filings Chat — {endpoint}  (commands: /new, /exit)");
+Console.WriteLine($"SEC Filings Chat — {endpoint}  (commands: /agent <{string.Join('|', agents)}>, /new, /exit)");
 CancellationTokenSource? running = null;
 Console.CancelKeyPress += (_, e) =>
 {
@@ -30,12 +33,27 @@ Console.CancelKeyPress += (_, e) =>
 };
 while (true)
 {
-    Console.Write("you> ");
+    Console.Write($"you ({agent})> ");
     var line = Console.ReadLine()?.Trim();
     if (line is null or "/exit")
         return 0;
     if (line == "/new")
         thread = null;
+    else if (line.StartsWith("/agent"))
+    {
+        var name = line["/agent".Length..].Trim();
+        if (!agents.Contains(name))
+        {
+            WriteError($"Unknown agent '{name}'. Choose one of: {string.Join(", ", agents)}.");
+            continue;
+        }
+        // The server keys sessions by agent and thread id, so the old thread id would not carry the history over.
+        agent = name;
+        thread = null;
+        endpoint = Endpoint();
+        client = new AGUIChatClient(new AGUIChatClientOptions(http, endpoint));
+        Console.WriteLine($"Switched to {endpoint} (new conversation)");
+    }
     else if (line.Length > 0)
     {
         using var cancel = new CancellationTokenSource();
@@ -93,6 +111,8 @@ async Task<int> RunAsync(string question, CancellationToken ct)
         : $"agent={agent} thread={thread} toolCalls={toolCalls} elapsedMs={elapsed.TotalMilliseconds:0}");
     return 0;
 }
+
+string Endpoint() => $"{api.TrimEnd('/')}/agents/{agent}";
 
 string? Option(string name)
 {

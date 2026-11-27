@@ -59,12 +59,19 @@ var mcp = builder.AddDotnetProject("filings-mcp-server", "../SECFilingsAgenticRa
 
 // Waits only for the database: search returns no hits until indexing has run. Host port 5180 comes from launchSettings.json,
 // so clients can rely on it. No WaitFor(mcp): agentic-rag connects on its first run, and a missing MCP server only costs it its tools.
-builder.AddDotnetProject("agent-server-web-api", "../SECFilingsAgenticRag.AgentServer/SECFilingsAgenticRag.AgentServer.csproj")
+var api = builder.AddDotnetProject("agent-server-web-api", "../SECFilingsAgenticRag.AgentServer/SECFilingsAgenticRag.AgentServer.csproj")
     .WithReference(db).WaitFor(db)
     .WithReference(ollama)
     .WithReference(mcp)
     .WithAIModels(chatModel, embeddingModel)
     .WithExternalHttpEndpoints();
+
+// An interactive REPL, so it runs in a terminal: the dashboard's Console logs page (Terminal view), or
+// `aspire terminal attach chat-client-cli`. It has no service discovery, so it gets the API's URL directly.
+builder.AddDotnetProject("chat-client-cli", "../SECFilingsAgenticRag.AgentClient.Cli/SECFilingsAgenticRag.AgentClient.Cli.csproj")
+    .WithEnvironment("SECFILINGS_API", api.GetEndpoint("http"))
+    .WaitFor(api)
+    .WithTerminal();
 
 // Explicit start: an eval run takes minutes to hours on CPU, so it runs only when asked (aspire resource evals-retrieval start).
 IResourceBuilder<DotnetProjectResource> Evals(string name, string command) => builder.AddDotnetProject(name, "../../evals/SECFilingsAgenticRag.Evals/SECFilingsAgenticRag.Evals.csproj")

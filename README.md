@@ -144,8 +144,9 @@ aspire run          # interactive, opens the dashboard; Ctrl+C to stop
 # 3. In a second terminal, request indexing. Minutes the first time; seconds when nothing changed.
 ./scripts/Invoke-Indexing.ps1
 
-# 4. Chat. Pick the agent per run: chat-only | standard-rag (default) | agentic-rag
-dotnet run --project src/SECFilingsAgenticRag.AgentClient.Cli -- --agent agentic-rag
+# 4. Chat: open chat-client-cli in the dashboard (Console logs → Terminal), or attach from a terminal.
+#    Switch agents in the chat with /agent chat-only (default) | standard-rag | agentic-rag
+aspire terminal attach chat-client-cli
 ```
 
 **Use the MCP server from VS Code.** While the app runs, the repo's [.vscode/mcp.json](.vscode/mcp.json) connects Copilot Chat to the MCP server's `search_filings` and `list_available_filings` tools.
@@ -156,7 +157,7 @@ dotnet run --project src/SECFilingsAgenticRag.AgentClient.Cli -- --agent agentic
 |---|---|---|
 | Chat model | AppHost `appsettings.json` → `Parameters:chat-model` | `${env:Parameters__chat-model} = "qwen3:8b"` |
 | Embedding model | AppHost `Parameters:embedding-model` (dimensions are fixed at 768 in code) | must produce 768 dimensions; drop `sec_filing_chunks` and re-index afterwards |
-| Agent | chosen per request by URL (`/agents/chat-only`, `/agents/standard-rag`, `/agents/agentic-rag`); AgentClient.Cli `--agent` | `--agent agentic-rag` |
+| Agent | chosen per request by URL (`/agents/chat-only`, `/agents/standard-rag`, `/agents/agentic-rag`); AgentClient.Cli `/agent <name>` in the chat, or `--agent` | `/agent agentic-rag` |
 | Retrieval strategy | AgentServer `appsettings.json` → `Retrieval:Strategy`, `Retrieval:Rerank:Enabled` | `$env:Retrieval__Strategy = "Hybrid"` |
 | Cloud chat (optional) | `chat-provider`, `chat-endpoint`, `chat-api-key` (secret) | set via `dotnet user-secrets` on the AppHost |
 
